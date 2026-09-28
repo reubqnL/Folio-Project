@@ -1,0 +1,32 @@
+{
+  "check_count" : 12,
+  "checks" : [
+    "Language-asset download requires an independent explicit consent",
+    "Recording preparation cannot bypass the microphone-permission state",
+    "100 generated PCM chunks pass through the bounded queue without borrowed-buffer corruption",
+    "Volatile hypotheses are replaced rather than duplicated in the transcript",
+    "Stop request, microphone-off acknowledgement and analyzer closure are distinct states",
+    "A provisional tail requires explicit incomplete-transcript acknowledgement",
+    "Manual correction invalidates the earlier transcript review identity",
+    "Reviewed speech cannot overwrite a changed capture draft",
+    "Using a reviewed transcript still does not generate AI or write the target note",
+    "Only the approved transcript enters the fixture model; unselected note text stays outside",
+    "A separately approved capture edit reaches the real journalled note store",
+    "Reset session rejects late transcription events from the old run"
+  ],
+  "live_microphone" : false,
+  "live_model_inference" : false,
+  "live_speech_recognition" : false,
+  "not_proven" : [
+    "Mac TCC microphone permission",
+    "AVAudioEngine\/tap\/conversion lifecycle",
+    "SpeechAnalyzer assets\/results\/accuracy",
+    "real-time callback performance",
+    "native UI\/accessibility",
+    "independent security approval"
+  ],
+  "platform" : "Debian GNU\/Linux 13 (trixie)",
+  "scope" : "Generated PCM\/transcript events; actual lifecycle, consent, reviewed capture and temporary vault store",
+  "status" : "PASS",
+  "synthetic_audio" : true
+}

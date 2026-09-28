@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "platform": "Linux-6.1.158+-x86_64-with-glibc2.41",
+  "test_count": 13,
+  "checks": [
+    {
+      "case": "SIGKILL create at journalSealed",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL create at beforeInstall",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL create at installed",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL create at metadataUpdated",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL create at committed",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL save at journalSealed",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL save at beforeInstall",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL save at installed",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL save at metadataUpdated",
+      "status": "PASS"
+    },
+    {
+      "case": "SIGKILL save at committed",
+      "status": "PASS"
+    },
+    {
+      "case": "Changed external head after SIGKILL is not overwritten",
+      "status": "PASS"
+    },
+    {
+      "case": "Tampered proposal is rejected after process death",
+      "status": "PASS"
+    },
+    {
+      "case": "Unix mode, ownership and extended attribute survive replacement",
+      "status": "PASS"
+    }
+  ],
+  "scope": "Real compiled Folio storage core; child processes killed with SIGKILL; generated temporary folders only",
+  "does_not_prove": [
+    "power-loss durability",
+    "macOS/APFS F_FULLFSYNC behaviour",
+    "AppKit UI correctness",
+    "large-vault performance",
+    "independent security audit"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "status": "PASS",
+  "platform": "Linux-6.1.158+-x86_64-with-glibc2.41",
+  "test_count": 12,
+  "checks": [
+    {
+      "case": "create SIGKILL at journalSealed",
+      "status": "PASS"
+    },
+    {
+      "case": "create SIGKILL at beforeInstall",
+      "status": "PASS"
+    },
+    {
+      "case": "create SIGKILL at installed",
+      "status": "PASS"
+    },
+    {
+      "case": "create SIGKILL at metadataUpdated",
+      "status": "PASS"
+    },
+    {
+      "case": "create SIGKILL at committed",
+      "status": "PASS"
+    },
+    {
+      "case": "update SIGKILL at journalSealed",
+      "status": "PASS"
+    },
+    {
+      "case": "update SIGKILL at beforeInstall",
+      "status": "PASS"
+    },
+    {
+      "case": "update SIGKILL at installed",
+      "status": "PASS"
+    },
+    {
+      "case": "update SIGKILL at metadataUpdated",
+      "status": "PASS"
+    },
+    {
+      "case": "update SIGKILL at committed",
+      "status": "PASS"
+    },
+    {
+      "case": "External roadmap head survives interrupted-write recovery",
+      "status": "PASS"
+    },
+    {
+      "case": "Corrupt proposed roadmap is not installed",
+      "status": "PASS"
+    }
+  ],
+  "scope": "Real compiled roadmap store; actual SIGKILL; generated disposable project directories",
+  "not_proven": [
+    "power-loss durability",
+    "APFS and Mac sandbox behaviour",
+    "native planning/Metal UI",
+    "release security"
+  ]
+}

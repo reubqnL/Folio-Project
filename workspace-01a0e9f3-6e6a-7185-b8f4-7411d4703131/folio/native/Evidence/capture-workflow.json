@@ -1,0 +1,28 @@
+{
+  "check_count" : 11,
+  "checks" : [
+    "Transcript restructuring blocked until explicit confirmation",
+    "Only explicit input and selected context were serialized; unselected canaries absent",
+    "Text-only provider received the inspected request, with no application tool capability",
+    "Generation and proposal creation left the actual note bytes unchanged",
+    "Stale review could not overwrite the owner's newer writing",
+    "Explicit comparison issued a new review identity and invalidated the old approval",
+    "Section approval kept newer writing and excluded the unselected section",
+    "Approved core edit passed through the real journalled store without changing front matter",
+    "Stale undo could not delete intervening writing",
+    "Validated undo restored the exact current-before-apply bytes through real storage",
+    "Reopening retained the final acknowledged bytes and stable note identity"
+  ],
+  "live_model_inference" : false,
+  "not_proven" : [
+    "Foundation Models SDK\/runtime behaviour or model output quality",
+    "native editor transaction\/undo",
+    "microphone or speech recognition",
+    "Mac sandbox\/APFS\/performance\/accessibility",
+    "independent security review"
+  ],
+  "platform" : "Debian GNU\/Linux 13 (trixie)",
+  "provider" : "Fixed test fixture, not an LLM",
+  "scope" : "Generated temporary vault; actual preparation\/broker\/review\/diff\/application plan and file store",
+  "status" : "PASS"
+}

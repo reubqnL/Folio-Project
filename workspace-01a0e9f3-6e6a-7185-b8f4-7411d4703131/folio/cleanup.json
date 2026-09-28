@@ -1,0 +1,103 @@
+{
+  "reason": "User requested removal of unnecessary files; preserve approved identity, current source, decisions, current evidence and useful reference artifacts.",
+  "preserved": [
+    "folio/assets/folio-app-icon.png",
+    "folio/native/",
+    "folio/decisions/",
+    "folio/Folio-Implementation-Plan.md",
+    "folio/Folio-Baseline.md",
+    "folio/Folio-Baseline.pdf",
+    "folio/Folio-Prototype.html",
+    "folio/Folio-Roadmap.xlsx",
+    "folio/concepts/"
+  ],
+  "removed": [
+    {
+      "path": "Folio-Baseline-Package.zip",
+      "bytes": 6044948
+    },
+    {
+      "path": "Folio-Native-Increment-01.zip",
+      "bytes": 1709964
+    },
+    {
+      "path": "Folio-Native-Increment-02.zip",
+      "bytes": 1766381
+    },
+    {
+      "path": "folio/Folio-Baseline.html",
+      "bytes": 2360265
+    },
+    {
+      "path": "folio/50-Deep-Dive-Questions.md",
+      "bytes": 10778
+    },
+    {
+      "path": "folio/MANIFEST.json",
+      "bytes": 4255
+    },
+    {
+      "path": "folio/tools/build-baseline.cjs",
+      "bytes": 12628
+    },
+    {
+      "path": "folio/tools/build-prototype.py",
+      "bytes": 798
+    },
+    {
+      "path": "folio/tools/build-roadmap.py",
+      "bytes": 17509
+    },
+    {
+      "path": "folio/tools/package-lock.json",
+      "bytes": 4357
+    },
+    {
+      "path": "folio/tools/package.json",
+      "bytes": 86
+    },
+    {
+      "path": "folio/tools/prototype-template.html",
+      "bytes": 91170
+    },
+    {
+      "path": "folio/tools/prototype-test-report.json",
+      "bytes": 558
+    },
+    {
+      "path": "folio/tools/record-decisions.py",
+      "bytes": 4467
+    },
+    {
+      "path": "folio/tools/serve.py",
+      "bytes": 835
+    },
+    {
+      "path": "folio/tools/test-prototype.cjs",
+      "bytes": 7628
+    },
+    {
+      "path": "folio/tools/validate-native-source.py",
+      "bytes": 7133
+    },
+    {
+      "path": "folio/tools/package-native-02.py",
+      "bytes": 7171
+    },
+    {
+      "path": "Folio-Native-Increment-03.zip",
+      "bytes": 1825852
+    },
+    {
+      "path": "folio/tools/package-native-03.py",
+      "bytes": 7609
+    },
+    {
+      "path": ".sudo_as_admin_successful",
+      "bytes": 0
+    }
+  ],
+  "bytes_removed": 13884392,
+  "latest_source_snapshot_preserved_until_replaced": "Replaced by Folio-Source.zip after successful validation",
+  "approved_logo_sha256": "ac1a2e20ffc15418726d07c36bffe2abfbb2dde800017f81dc612b09ba9c29bc"
+}

@@ -1,0 +1,32 @@
+{
+  "check_count" : 11,
+  "checks" : [
+    "1,000 generated Markdown files imported without rewriting",
+    "FTS5 external-content cache built outside the vault and passed integrity check",
+    "Full-text query finds the expected saved note",
+    "Title\/path query resolves to the same stable note ID",
+    "Saving updates the cache and removes superseded search terms",
+    "Preview maps a source cursor into its code block without changing source bytes",
+    "Preview generation leaves authored Markdown byte-identical",
+    "Tag scope returns the expected 100 notes",
+    "Typed command registry and native-safe shortcuts validate independently of notes",
+    "Cache reopens with its binding and updated query results intact",
+    "Explicit cache disposal removes no Markdown or recovery data"
+  ],
+  "generated_note_count" : 1000,
+  "not_proven" : [
+    "Mac UI\/IME\/undo\/accessibility",
+    "minimum-Mac energy\/memory\/frame budgets",
+    "100k-note performance",
+    "complete CommonMark\/GFM conformance",
+    "release security"
+  ],
+  "platform" : "Debian GNU\/Linux 13 (trixie)",
+  "scope" : "Generated temporary files; actual store, SQLite FTS5, Markdown parser and command policy",
+  "status" : "PASS",
+  "timings_ms" : {
+    "index_1000_notes" : 503.7306547164917,
+    "warm_query_median" : 0.13506412506103516,
+    "warm_query_p95" : 0.22530555725097656
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "library": "PHC Argon2 reference implementation",
+  "release": "20190702",
+  "commit": "62358ba2123abd17fccf2a108a301d4b52c01a7c",
+  "source_url": "https://codeload.github.com/P-H-C/phc-winner-argon2/tar.gz/62358ba2123abd17fccf2a108a301d4b52c01a7c",
+  "download_sha256": "d177732879114c07a5ab7e6533e61d2c9dff204044335537c89ed16e7d3e4e2f",
+  "files": [
+    {
+      "path": "include/argon2.h",
+      "sha256": "df20cb726a2fe6bccc736b81ea0d86219766a0d17f1794c19e048a34830ca1cc"
+    },
+    {
+      "path": "src/argon2.c",
+      "sha256": "72a93deebc5fd76bec0c6d300a2d92b500fb354b26babbddbc6d8b88681e663d"
+    },
+    {
+      "path": "src/core.c",
+      "sha256": "0f53eb2370f8971f04fcf043b8083bf81d1530c48b2ead71c0b6c4e22a01aeec"
+    },
+    {
+      "path": "src/core.h",
+      "sha256": "c9665623cb3d306f63b6a3effd87bcfab971c28253c77e111445e42c1523235e"
+    },
+    {
+      "path": "src/ref.c",
+      "sha256": "4ec47b080c22f4ee416b9dbcfae70ee6007fcfba427f870d7b84395846fa1bc7"
+    },
+    {
+      "path": "src/thread.c",
+      "sha256": "1402085e2f54b021ea31b0d301f4b689a8b300832e2d11901502e62835185e3e"
+    },
+    {
+      "path": "src/thread.h",
+      "sha256": "9eab7f9ff356862a00a3075478dd0059344953ed79daab8b29185be2010efe78"
+    },
+    {
+      "path": "src/encoding.c",
+      "sha256": "e20124ec0f780f88527e79cf00825e839624ed1f469c7e231596bf070f8c7b14"
+    },
+    {
+      "path": "src/encoding.h",
+      "sha256": "42f283d12ec445cfb423ac2f1f5a5d1a7f152ce2b9363f6ec3e1d5b61cd4ee6d"
+    },
+    {
+      "path": "src/blake2/blake2.h",
+      "sha256": "3c2de197dd23179f78c57deac7b73a6049778bf651c5db57e508b2cfce5e7559"
+    },
+    {
+      "path": "src/blake2/blake2-impl.h",
+      "sha256": "8ac91f1f57d94235f8de0069b7809be1deb365c3b37adb8e30423cd364aff09a"
+    },
+    {
+      "path": "src/blake2/blake2b.c",
+      "sha256": "52519ccbc1e48f489ff444091f630d05dadcc8f1ee61c5b7361e3a9618299c9a"
+    },
+    {
+      "path": "src/blake2/blamka-round-ref.h",
+      "sha256": "bcfdcf785218cf897f05b144e80b659e611188fee3887d533bdcb7a6aa4c336b"
+    }
+  ],
+  "implementation": "Upstream reference C code, unmodified; ARGON2_NO_THREADS retains lane semantics but does not spawn worker threads.",
+  "review_status": "Pinned established implementation; Folio integration/security review NOT COMPLETE."
+}
