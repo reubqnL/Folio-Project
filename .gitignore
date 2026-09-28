@@ -1,0 +1,134 @@
+# ============================================================================
+# Folio — Git exclusion rules
+#
+# Stack: Swift 6 package (SwiftPM) + XcodeGen-generated Xcode project for the
+# macOS app, with C targets and Python/shell verification tooling.
+#
+# Policy: only *generated*, *machine-specific* or *sensitive* files are ignored.
+# Source, checked-in configuration, assets and documentation are always tracked.
+# ============================================================================
+
+
+# ----------------------------------------------------------------------------
+# 1. BUILD OUTPUT
+# ----------------------------------------------------------------------------
+
+# SwiftPM build products and intermediates.
+.build/
+
+# Scratch/build output used by scripts/verify-on-mac.sh and the process tests
+# (Xcode derived data, crash-test fixtures, ad-hoc signed .app bundles).
+.build-output/
+
+# Xcode derived data.
+DerivedData/
+
+# `xcodegen generate --spec project.yml` produces Folio.xcodeproj from the
+# checked-in project.yml spec, so the project bundle is a build artefact.
+# Only project.yml is source.
+Folio.xcodeproj/
+*.xcodeproj/
+
+# Packaged distributables produced by tools/package-native.py.
+dist/
+*.zip
+
+
+# ----------------------------------------------------------------------------
+# 2. GENERATED VERIFICATION EVIDENCE
+# ----------------------------------------------------------------------------
+
+# Test logs and machine-generated result reports written by scripts/*.sh and
+# scripts/*.py. They embed host-specific build paths, so they are recreated on
+# demand with `bash scripts/test-core.sh` rather than committed.
+# Evidence/README.md is kept so the directory and its purpose are documented.
+Evidence/*.json
+Evidence/*.log
+Evidence/*.plist
+
+# Status/manifest reports regenerated on every run of tools/package-native.py.
+Verification.json
+SOURCE-MANIFEST.json
+
+
+# ----------------------------------------------------------------------------
+# 3. TOOLING CACHES
+# ----------------------------------------------------------------------------
+
+# Python bytecode for scripts/ and tools/.
+__pycache__/
+*.py[cod]
+
+# Optional pinned Swift toolchain cache used by scripts/setup-linux-swift.sh.
+# It lives outside the repository ($HOME/.cache) and is never committed.
+
+
+# ----------------------------------------------------------------------------
+# 4. IDE / EDITOR METADATA
+# ----------------------------------------------------------------------------
+
+# JetBrains (IntelliJ / AppCode / Fleet).
+.idea/
+
+# Visual Studio Code.
+.vscode/
+
+# Xcode per-user state: window layout, breakpoints, scheme selections.
+*.xcuserstate
+*.xcuserdatad/
+*.xcuserdata/
+*.xcbkptlist
+*.perspectivev3
+*.mode1v3
+*.mode2v3
+*.pbxuser
+*.xcscmblueprint
+
+
+# ----------------------------------------------------------------------------
+# 5. OPERATING-SYSTEM METADATA
+# ----------------------------------------------------------------------------
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+
+# ----------------------------------------------------------------------------
+# 6. SECRETS, CREDENTIALS AND LOCAL-ONLY CONFIGURATION
+# ----------------------------------------------------------------------------
+# Folio keeps no credentials in the repository: the app reads passphrases from
+# the macOS Keychain at runtime and the build uses ad-hoc local signing. These
+# patterns guard against anything sensitive being added by accident.
+
+# Local environment files.
+.env
+.env.*
+!.env.example
+
+# Private keys, certificates and Apple signing/provisioning material.
+*.pem
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.certSigningRequest
+*.developerprofile
+
+# Exported Apple developer credentials / App Store Connect keys.
+*.p8
+AuthKey_*.p8
+fastlane/*.env
+*.keystore
+*.jks
+
+# Local vaults, notes and test fixtures created while running the app.
+*.rdm
+.folio/

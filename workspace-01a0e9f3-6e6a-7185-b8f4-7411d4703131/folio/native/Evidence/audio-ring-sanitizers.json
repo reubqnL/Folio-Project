@@ -1,6 +1,0 @@
-{
-  "status": "PASS",
-  "checks": 6,
-  "accepted_threaded_frames": 100000,
-  "scope": "synthetic PCM queue; ASan/UBSan; not microphone or speech recognition"
-}
