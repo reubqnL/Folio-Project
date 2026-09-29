@@ -1,3 +1,24 @@
+# Increment 09 — honest durability acknowledgement (N01 contract)
+
+## Added
+
+- `VaultDurability` (`Sources/FolioCore/Storage/VaultDurability.swift`): the N01 seven-state acknowledgement model — `notCreated`, `loadedFromDisk`, `editsPending`, `writing`, `durableOnDisk`, `externalConflict`, `failed` — with honest labels, scoped explanations and `acknowledgesDurability` true only after the storage barrier is crossed. Queued or timed work can never be displayed as saved.
+- `VaultCheckpointState` and `VaultRemoteState`: the contract's separation axes — `.rdm` archive construction is displayed apart from local durability (a stale archive is never described as up to date), and this build's missing sync is shown explicitly as "Local only — no sync" rather than implied.
+- `SaveCoalescing` named, documented measurements: 250 ms edit debounce target and 500 ms bounded maximum delay after the first dirty edit; the docs state plainly that these schedule writes and do not acknowledge them.
+- Editor status line now derives from the model (`OpenNoteDocument.durability`) with barrier-scoped help text; the notes status bar shows the remote-state axis. Encrypted workspace shows all three axes (working-copy draft durability, checkpoint state, sync) as one summary line with per-axis explanations, tracks confirmed vs pending working-copy writes with a generation guard so a superseded debounced write cannot confirm newer text, and reports checkpoint failures without discarding drafts.
+- "Cancelling creates no file and no hidden draft on disk" is now stated on the new-note sheet (contract state 1).
+- 10 focused tests: resolution/precedence matrix, label-honesty rules (only acknowledged states may say "Durable"/"Saved"), scoped explanations, checkpoint/remote separation wording, and measured coalescing bounds including a 40-edit continuous-typing simulation.
+
+## Fixed
+
+- Stale development captions: the launcher no longer calls the encrypted preview "memory-only"/"read-only" or Increment 07, the encrypted landing no longer lists the persistent encrypted index as a future gate, and the unlock notice no longer claims search results are unpersisted.
+
+## Evidence and limits
+
+The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures. This increment's sources and tests pass full swift-syntax parsing (110 Swift files, 0 syntax failures); the 10 new tests must run via `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence. The storage barrier's APFS/power-loss behaviour remains unverified on Mac. This is not safe for sensitive data or release; plain-vault data remains plaintext.
+
+---
+
 # Increment 08 — persistent encrypted working storage
 
 ## Added

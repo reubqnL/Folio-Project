@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 42,
+  "estimated_percent": 43,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -13,7 +13,7 @@
     {
       "area": "Notes, project storage and search",
       "weight": 20,
-      "credited_points": 12
+      "credited_points": 13
     },
     {
       "area": "Native editing, reading and accessibility",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 08: persistent encrypted working storage \u2014 chained two-slot draft records with fail-closed stale classification and reviewed resolution, encrypted derived-index cache bound to its archive snapshot, session draft APIs and native draft staging/restore/review wiring. 23 focused tests added (356 total) whose execution still has to run via scripts/test-core.sh; all 108 Swift files pass swift-syntax parsing. The last full Debug/Release run remains Increment 07's 333 tests with 0 failures.",
-  "current_work": "Execution of the Increment 08 suite in a Swift-capable environment, then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
+  "last_completed": "Increment 09: honest durability acknowledgement (N01 contract) — explicit seven-state VaultDurability model with barrier-scoped labels, checkpoint/sync separation axes, documented 250/500 ms coalescing measurements and 10 new state-model tests (366 total, new tests unrun here; recorded full run remains Increment 07's 333).",
+  "current_work": "Execution of the Increment 08/09 suites in a Swift-capable environment, then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage for the working slots and save barriers, and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
   "history": [
     {
       "increment": "04",
@@ -78,6 +78,11 @@
       "increment": "08",
       "estimate": 42,
       "basis": "Encrypted area credited 2/13 for the tested-design persistent encrypted working store and index cache with fail-closed review semantics; no credit for Mac parity, fault/power-loss coverage, Keychain slots or independent review. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "09",
+      "estimate": 43,
+      "basis": "Notes/storage area credited 13/20 for the tested-design durability acknowledgement model (honest seven-state labels, measured coalescing bounds, checkpoint/sync separation); no credit for Mac barrier/power-loss verification. New tests not yet executed in a Swift-capable environment do not raise the credit further."
     }
   ]
 }

@@ -24,7 +24,7 @@ The percentage is a weighted planning estimate, not measured security or correct
 
 ## Evidence obtained on Linux
 
-- **333 core XCTest cases pass in Debug and Release on the recorded Linux runs.** Increment 08 adds 23 focused working-store/session tests (356 total) whose execution still has to run on a Swift toolchain before counting as evidence.
+- **333 core XCTest cases pass in Debug and Release on the recorded Linux runs.** Increments 08 and 09 add 23 focused working-store/session tests and 10 durability-model tests (366 total) whose execution still has to run on a Swift toolchain before counting as evidence.
 - **69 generated workflow/process scenarios pass:** 13 note storage, 12 roadmap storage, 11 reading, 10 planning/graph, 11 capture/storage and 12 synthetic speech/handoff.
 - **6 separate C audio-ring checks pass with AddressSanitizer and UndefinedBehaviorSanitizer**, including 100,000 accepted threaded frames.
 - C warning/static-analysis checks cover Linux sources. Mac Swift is syntax-parsed only.
@@ -86,6 +86,6 @@ The supplied logo remains unchanged. The workspace retains one current source ar
 
 ## Encrypted `.rdm` container
 
-The active source contains a pinned Argon2id implementation, AES-256-GCM/HKDF adapters, strict ZIP64 encrypted manifest/object transport, passphrase/recovery slots and an atomic checkpoint actor. Increment 08 adds the persistent encrypted local working store (chained sealed draft records with fail-closed stale review) and the encrypted derived-index cache. The recorded encrypted suite has 56 passing tests from Increment 07, with 23 working-store/session tests added in Increment 08 pending execution; the last full core runs have 333 Debug and 333 Release tests passing on Linux.
+The active source contains a pinned Argon2id implementation, AES-256-GCM/HKDF adapters, strict ZIP64 encrypted manifest/object transport, passphrase/recovery slots and an atomic checkpoint actor. Increment 08 adds the persistent encrypted local working store (chained sealed draft records with fail-closed stale review) and the encrypted derived-index cache. Increment 09 adds the explicit N01 durability acknowledgement model (`VaultDurability` with separate checkpoint and sync axes) so the UI cannot display queued or timed work as saved. The recorded encrypted suite has 56 passing tests from Increment 07, with 23 working-store/session tests (08) and 10 durability-model tests (09) pending execution; the last full core runs have 333 Debug and 333 Release tests passing on Linux.
 
 This is not production encryption approval. Mac CryptoKit/APFS parity, Keychain/device-slot runtime validation, recovery rotation, on-demand encrypted object caching, fuzzing, power-loss, migration and independent cryptographic review remain open. Read `../architecture/ENCRYPTED-RDM-CONTRACT.md`; do not use it for sensitive projects.

@@ -20,7 +20,7 @@ struct NewNoteSheet: View {
                 Text("Relative to this project, for example Notes or Projects/Folio.")
                     .font(.caption).foregroundStyle(.secondary)
             }.disabled(creating)
-            Text("Creates a real UTF-8 Markdown file after confirmation. Existing files are never silently replaced.")
+            Text("Creates a real UTF-8 Markdown file after confirmation. Existing files are never silently replaced. Cancelling creates no file and no hidden draft on disk.")
                 .font(.caption).foregroundStyle(FolioStyle.gold)
             if let errorMessage { Text(errorMessage).font(.callout).foregroundStyle(.red).lineLimit(4) }
             HStack {

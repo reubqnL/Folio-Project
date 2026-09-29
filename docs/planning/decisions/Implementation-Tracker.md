@@ -1,26 +1,27 @@
-# Implementation tracker — Increment 08
+# Implementation tracker — Increment 09
 
-**Estimated completion: 42% (weighted planning estimate). Release/security readiness: blocked. Owner testing: HOLD.**
+**Estimated completion: 43% (weighted planning estimate). Release/security readiness: blocked. Owner testing: HOLD.**
 
 All 50 decisions remain authoritative. Every user-facing progress update includes the estimate and completed work; code/test counts do not imply production security.
 
 ## Added/tested in the core
 
-- `RDMWorkingStore`: persistent encrypted working storage for open `.rdm` projects. Unsaved drafts are sealed (AES-256-GCM, domain-separated HKDF key/AAD) into two alternating slot records chained by generation and previous-record digest; writes use the existing atomic `.folio` staging path; no plaintext draft/index bytes leave the process.
-- Fail-closed restore classification (`.empty` / `.current` / `.stale`): torn writes, missing history slots, single-slot rollback that breaks the chain, mixed epochs and unauthenticated copies surface as stale review items; draft writes refuse (`recoveryRequired`) until `resolve()` explicitly re-anchors a fresh epoch after preserving the set-aside bytes privately.
-- Encrypted derived-index cache bound to its archive snapshot (`FRX1` record). Cache hits skip the in-memory rebuild; every cache failure mode falls back to the full rebuild from the authenticated project and cannot corrupt search.
-- `RDMProjectSession` working-state API (`restoreWorkingState`, `stageDraft`, `discardDraft`, `resolveWorkingState`) plus checkpoint-then-cache ordering; `EncryptedWorkingIndex.rebuild(notes:)` supports validated cache restore.
-- New focused tests (working-store round trip/chaining, stale detection matrix, reviewed resolution with byte preservation, draft bounds/validation, plaintext-canary scan, index-cache round trip/corruption/snapshot binding, session draft survive-close/reopen, discard, stale-block, cache refresh and fallback).
+- `VaultDurability`: the N01 seven-state durability acknowledgement model (`notCreated`, `loadedFromDisk`, `editsPending`, `writing`, `durableOnDisk`, `externalConflict`, `failed`) with honest labels, scoped explanations and `acknowledgesDurability` true only after the storage barrier (staged-file flush, atomic install, parent-directory flush). Queued/timed work can never be displayed as saved.
+- `VaultCheckpointState` / `VaultRemoteState`: contract separation axes — `.rdm` archive construction is shown apart from local durability, and this build's missing sync is explicit ("Local only — no sync") rather than implied.
+- `SaveCoalescing` named measurements (250 ms edit debounce target, 500 ms bounded maximum after first dirty) — documented as scheduling values, not acknowledgement promises.
+- 10 focused tests: resolution/precedence matrix, label-honesty rules (only acknowledged states may say "Durable"/"Saved"), scoped explanations, checkpoint/remote separation wording, coalescing constants and a 40-edit continuous-typing bound simulation. Suite total is now 366 test functions in source.
 
 ## Native source updated; unverified on Mac
 
-- The encrypted project UI debounces draft edits into the encrypted local working copy (250 ms coalescing), restores the most recent unsaved draft on unlock, discards the local draft after a successful checkpoint, and exposes an explicit "Review local working copies" resolution action; in-app captions now describe the real draft/index behaviour.
-- No SwiftUI/AppKit compile of these changes has run in this environment.
+- Plain editor status derives from the model (`OpenNoteDocument.durability`) with barrier-scoped help text including the unverified power-loss caveat; the notes status bar shows the sync axis; the new-note sheet states that cancelling creates no file and no hidden draft.
+- Encrypted workspace shows the three axes as one summary (working-copy draft durability with confirmed/pending/editor-only states, generation-guarded so a superseded debounced write cannot confirm newer text; checkpoint state including failed-without-discard; no sync).
+- Fixed stale captions (launcher increment/memory-only/read-only wording, encrypted landing gate list, unlock notice). No SwiftUI/AppKit compile of these changes has run in this environment.
 
 ## Current evidence and limits
 
-- **The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures.** This increment's sources and tests pass full swift-syntax parsing (108 Swift files, 0 syntax failures).
+- **The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures.** This increment's sources and tests pass full swift-syntax parsing (110 Swift files, 0 syntax failures).
 - This development environment cannot install a Swift toolchain (network policy), so the new tests have not been executed here. They must pass `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence; unrun evidence is blocking, not a pass.
+- The storage barrier's APFS/power-loss behaviour is unverified; the labels claim exactly the fsync/exchange/parent-flush barrier and no more.
 - **No real microphone, recognition accuracy, AVFoundation/TCC lifecycle, live LLM, Metal, AppKit, APFS, accessibility/performance or independent security approval has run here.**
 
 ## Remaining before owner handoff

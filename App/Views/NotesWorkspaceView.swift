@@ -52,8 +52,15 @@ struct NotesWorkspaceView: View {
             Divider()
             HStack {
                 if session.isOpening { ProgressView().controlSize(.small); Text("Opening project…") }
-                else { Text(session.workspaceSection == .roadmap ? session.planning.status : session.selectedDocument?.status ?? "Choose a local project folder") }
+                else {
+                    Text(session.workspaceSection == .roadmap ? session.planning.status : session.selectedDocument?.status ?? "Choose a local project folder")
+                        .help(session.selectedDocument?.statusExplanation ?? "")
+                }
                 Spacer()
+                if session.selectedDocument != nil {
+                    Text(VaultRemoteState.unavailable.label)
+                        .help(VaultRemoteState.unavailable.explanation)
+                }
                 Text("Development build · use copies").foregroundStyle(FolioStyle.gold)
             }
             .font(.caption).padding(.horizontal, 16).padding(.vertical, 8)

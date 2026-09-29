@@ -25,6 +25,9 @@ A local-first personal project and knowledge management environment:
   choose; Folio never rewrites your front matter or moves files behind your back.
 - **Editor & preview** — native Markdown editing with source, preview and split
   layouts.
+- **Honest save states** — edits are reported as pending until the write is
+  acknowledged on disk; a queued or timed write is never shown as saved, and
+  local durability, archive checkpoints and sync are reported separately.
 - **Search** — fast local full-text search across your project.
 - **Command palette & shortcuts** — keyboard-first navigation, with protected
   mappings so remapping never breaks native editing shortcuts.

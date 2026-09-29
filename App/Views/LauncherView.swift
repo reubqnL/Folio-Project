@@ -29,7 +29,7 @@ struct LauncherView: View {
                 ) { session.destination = .notes }
                 moduleCard(
                     title: "Encrypted .rdm", symbol: "lock.doc",
-                    subtitle: "Authenticated, memory-only development preview.",
+                    subtitle: "Authenticated encrypted projects with local working drafts.",
                     badge: "Experimental", enabled: true
                 ) {
                     if session.project == nil { session.openEncryptedWorkspace() }
@@ -43,9 +43,9 @@ struct LauncherView: View {
             }
             .frame(maxWidth: 1120)
             VStack(spacing: 6) {
-                Text("Native development build · Increment 07")
+                Text("Native development build · Increment 09")
                     .font(.caption).foregroundStyle(FolioStyle.gold)
-                Text("Notes, planning, connections and reviewed capture are in development. Encrypted .rdm is an experimental read-only preview; native AI/speech execution and collaboration still need validation or implementation.")
+                Text("Notes, planning, connections and reviewed capture are in development. Encrypted .rdm is an experimental preview with persistent local working drafts; native AI/speech execution and collaboration still need validation or implementation.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 24)

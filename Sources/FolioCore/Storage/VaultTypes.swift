@@ -127,8 +127,19 @@ public enum VaultPaths {
 }
 
 /// Monotonic-time calculation; continuous typing cannot reset the window forever.
+///
+/// The plan calls the debounce a coalescing target, not an acknowledgement
+/// promise: these values only schedule the write attempt. Durability is
+/// acknowledged separately, after the storage barrier is crossed
+/// (`VaultDurability.durableOnDisk`).
 public enum SaveCoalescing {
+    /// Coalescing target after the latest edit (250 ms).
+    public static let editDebounce: Double = 0.25
+    /// Bounded maximum delay after the first dirty edit (500 ms). Continuous
+    /// typing cannot push the first write attempt past this bound.
+    public static let boundedMaximumDelay: Double = 0.5
+
     public static func deadline(firstDirty: Double, latestEdit: Double) -> Double {
-        min(firstDirty + 0.5, latestEdit + 0.25)
+        min(firstDirty + boundedMaximumDelay, latestEdit + editDebounce)
     }
 }

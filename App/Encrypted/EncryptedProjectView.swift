@@ -77,7 +77,7 @@ struct EncryptedProjectView: View {
             Spacer()
             Image(systemName: "lock.doc").font(.system(size: 48)).foregroundStyle(FolioStyle.gold)
             Text("Encrypted projects").font(.largeTitle.weight(.semibold))
-            Text("Open or create an authenticated .rdm project. Its working search index stays in memory; it is not connected to the plain-vault search cache.")
+            Text("Open or create an authenticated .rdm project. Its working search index is memory-resident with an encrypted local cache; it is never connected to the plain-vault search cache.")
                 .foregroundStyle(.secondary).frame(maxWidth: 620, alignment: .leading)
             if copyIsPreparing {
                 VStack(alignment: .leading, spacing: 9) {
@@ -105,7 +105,7 @@ struct EncryptedProjectView: View {
                     }
                 }
             }
-            Text("Copying is explicit and non-destructive: the plain project is not deleted or rewritten. Mac Keychain, persistent encrypted index and runtime security validation remain separate gates. Do not use this build for sensitive data.")
+            Text("Copying is explicit and non-destructive: the plain project is not deleted or rewritten. Mac Keychain review and runtime security validation remain separate gates. Do not use this build for sensitive data.")
                 .font(.caption).foregroundStyle(.secondary).frame(maxWidth: 620, alignment: .leading)
             Spacer()
         }
@@ -204,6 +204,11 @@ struct EncryptedProjectView: View {
                 Text("Search runs from a memory-only index with an encrypted local cache")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            // N01: unsaved-text durability, archive checkpoint and sync are
+            // shown as separate axes; none of them implies another.
+            Text(controller.durabilitySummary)
+                .font(.caption).foregroundStyle(FolioStyle.gold)
+                .help(controller.durabilityExplanation)
             if let notice = controller.notice {
                 Text(notice).font(.caption).foregroundStyle(.secondary)
             }

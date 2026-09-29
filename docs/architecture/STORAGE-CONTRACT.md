@@ -43,6 +43,26 @@ SHA-256 fingerprints use CommonCrypto on Mac and system OpenSSL in Linux CI. Fin
 
 Linux uses `fsync` and `renameat2(RENAME_EXCHANGE)`. The Mac branch requests `fsync`, `F_FULLFSYNC` for regular-file writes and `renameatx_np(RENAME_SWAP)`. Unsupported barriers/exchange operations fail; they do not silently downgrade. The actual APFS, external-volume and macOS sandbox semantics still need verification.
 
+## Durability acknowledgement (N01)
+
+The UI shows save state only through the `VaultDurability` model (`Sources/FolioCore/Storage/VaultDurability.swift`). A timer firing, a debounce deadline or a queued write is never displayed as a save.
+
+| Contract state | Model | Label | What the label claims |
+|---|---|---|---|
+| 1 Not created | `.notCreated` | Not created | Cancelling the title/location sheet creates no file and no hidden draft on disk. |
+| 2 Editing / saving | `.editsPending` / `.writing` | Edits pending write / Writing to disk… | Pending work exists; **no** durability claim. |
+| 3 Locally durable | `.durableOnDisk` | Durable on disk | The acknowledged transaction crossed the storage barrier below. |
+| 4 Checkpoint pending/current | `VaultCheckpointState` | Checkpoint pending / current | `.rdm` archive construction is separate from local durability; a stale archive is never described as up to date. |
+| 5 Remote state | `VaultRemoteState.unavailable` | Local only — no sync | No upload/sync exists in this build; nothing implies one. |
+| 6 External conflict | `.externalConflict` | Conflict — local text preserved | The base version, the external version and local text are all retained. |
+| 7 Failure | `.failed` | Not saved: … | Local text is preserved; the last known good file is not overwritten. |
+
+**Storage barrier behind `.durableOnDisk`:** the staged file's contents are flushed (`fsync`; macOS requests `F_FULLFSYNC`), the install is atomic (non-clobbering link or metadata-preserving exchange), and the parent directory is flushed before `VaultSaveResult.written` is returned. The label claims exactly that barrier and no more: volume power-loss behaviour is **not verified** in this build.
+
+**Measured coalescing (not an acknowledgement promise):** `SaveCoalescing.editDebounce` = 250 ms after the latest edit; `SaveCoalescing.boundedMaximumDelay` = 500 ms after the first dirty edit, so continuous typing cannot delay the first write attempt past that bound. These values only schedule the write; durability is acknowledged separately after the barrier.
+
+**Encrypted workspace axes:** unsaved draft text reports its own durability against the encrypted working copy (`draftCopyLabel` on `EncryptedProjectController`), the archive reports `VaultCheckpointState`, and both are displayed separately from `VaultRemoteState`. A durable working-copy draft is never described as checked in.
+
 ## External editing and recovery
 
 - An advisory lock serialises Folio processes; it cannot force arbitrary editors or Git to cooperate.
