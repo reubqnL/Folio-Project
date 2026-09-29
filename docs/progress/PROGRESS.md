@@ -92,7 +92,11 @@ Five pickers sat in exactly that position and had no `labelsHidden()`:
 
 All six now carry `.labelsHidden()`, which removes the label from layout while keeping it as the control's accessibility title, and the self-describing chrome pickers gained a `.help()` string restating it. The pattern is the project's own precedent: the base commit already used `.labelsHidden()` on the roadmap's "Add prerequisite" picker — it had simply been missed everywhere the label was under pressure. The pickers whose labels are informative and have room (search scope, task editor, settings forms, capture review) keep their visible labels.
 
-**Not verified:** this is unverified source. The fix has not been compiled or run; it is based on one screenshot, and the owner will confirm on the next rebuild whether any vertical text remains.
+**Confirmed fixed (2026-09-29).** The owner rebuilt at `9f5096f` and reported: *"seems to be working just fine. nav works, those vertical text things are hidden."* No vertical text remains, and section navigation works from both the toolbar and the sidebar.
+
+**What that closes:** the layout work has now been built and run, and the two reported defects that this increment set out to fix — controls disappearing on resize, and character-by-character vertical text — are both absent in a running app. The owner's responsiveness checklist can now be marked for those items.
+
+**What it does not close:** the checklist's remaining items are unchecked. The capture panel's phantom cancellation and File → Open Recent were changed in the same unrebuilt commits and have not yet been exercised, and Source/Preview/Split in a normal window, resize-to-floor control hit-testing, and the note-editing regression set (create, edit, save, reopen, search) have not been re-walked since `188314e`.
 
 ## Evidence status
 

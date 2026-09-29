@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 46,
+  "estimated_percent": 47,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -18,7 +18,7 @@
     {
       "area": "Native editing, reading and accessibility",
       "weight": 15,
-      "credited_points": 10
+      "credited_points": 11
     },
     {
       "area": "Roadmap and connections",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Root cause of the character-by-character vertical text identified from the owner's screenshot and fixed: a SwiftUI Picker draws its own label beside the control, and in a row tighter than the sum of its fixed-width children that label is compressed to a few points and wraps at whatever character fits. The screenshot showed the column spelling 'Editor presentation' beside Source/Preview/Split. Six pickers now carry .labelsHidden() (editor presentation, workspace section, roadmap view, roadmap window, neighbourhood depth, capture input kind), following the project's own precedent -- the base commit already used .labelsHidden() on the roadmap's Add prerequisite picker. This also supersedes the previous round's assumption that the wrap was a narrow-window problem.",
-  "current_work": "Owner rebuilds with scripts/run-app.sh and reports whether any vertical text remains. Then: re-check the responsiveness checklist on FOLIO TEST, confirm the capture panel no longer reports a phantom cancellation, and verify File > Open Recent reopens FOLIO TEST without the open panel.",
+  "last_completed": "Owner confirmed on a rebuild at 9f5096f: 'seems to be working just fine. nav works, those vertical text things are hidden.' The two defects Increment 13 set out to fix -- controls disappearing on resize, and character-by-character vertical text -- are both absent in a running app, and section navigation works from both the toolbar and the sidebar. The layout work is no longer unverified source: it has been built, launched and checked by hand.",
+  "current_work": "Finish the pre-UI checklist rather than starting new features, since the owner has now confirmed the UI is usable. Three things are unexercised because they changed after the last rebuild: the capture panel's phantom cancellation message, File > Open Recent, and the relabelled Jump to Cursor control. Then re-walk the regression set that Increment 13 could have broken (create, edit, save, reopen, search) and, with the UI stable, move to the live microphone and speech testing that has been deliberately held back.",
   "history": [
     {
       "increment": "04",
@@ -123,6 +123,11 @@
       "increment": "13e",
       "estimate": 46,
       "basis": "No score change. The dominant remaining defect now has an identified cause and a targeted fix rather than a guess, which is progress in the same credited area, but the fix is unverified source and the item cannot be marked resolved until the owner confirms it on a rebuild."
+    },
+    {
+      "increment": "13f",
+      "estimate": 47,
+      "basis": "Native editing/reading credited one further point (11/15): the layout stabilisation is no longer unverified source. It has been compiled, launched and confirmed by the owner to fix both reported defects in a running app, which is the runtime evidence this area was held back for. Credit stops short of the full weight because the checklist items changed after that build remain unexercised, and no accessibility, IME or large-vault behaviour has been tested."
     }
   ]
 }
