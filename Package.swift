@@ -31,6 +31,7 @@ let package = Package(
         .executableTarget(name: "FolioPlanningProbe", dependencies: ["FolioCore"]),
         .executableTarget(name: "FolioCaptureProbe", dependencies: ["FolioCore"]),
         .executableTarget(name: "FolioSpeechProbe", dependencies: ["FolioCore"]),
+        .executableTarget(name: "FolioBenchmarkProbe", dependencies: ["FolioCore"]),
         .testTarget(name: "FolioCoreTests", dependencies: ["FolioCore"])
     ]
 )

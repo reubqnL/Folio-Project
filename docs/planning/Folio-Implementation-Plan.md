@@ -34,7 +34,7 @@ Your personal answers are the product authority. They override conflicting defau
 | Android later | **Read-only for this roadmap.** Editing would need a separately approved future scope. |
 | Release authority | **No exceptions to defined release blockers.** Missing or unrun evidence is blocking, not a pass. |
 
-## 2. Current build — Increment 11
+## 2. Current build — Increment 12
 
 The encrypted project foundation is now implemented as a separate, bounded subsystem, and Increment 08 adds persistent encrypted working storage on top of it:
 
@@ -47,6 +47,7 @@ The encrypted project foundation is now implemented as a separate, bounded subsy
 - Increment 09: honest durability acknowledgement (N01) — the explicit seven-state `VaultDurability` model with barrier-scoped labels, `VaultCheckpointState`/`VaultRemoteState` separation axes, documented 250/500 ms coalescing measurements, and native status surfaces that cannot display queued or timed work as saved.
 - Increment 10: incremental Markdown reparse (N02) — `MarkdownReparseSession` splices only the changed region of the reading preview with parse-equal results and stable untouched block identities, with boundary proofs around the splice and a full-parse fallback whenever equivalence cannot be proven.
 - Increment 11: compact link repair (N02) — `NoteLinkRepair` lists broken and ambiguous note links at exact source spans and applies one confirmed replacement at a time (digest-bound, form/anchor preserving, refused when the rewrite would break link syntax); the original link is kept until the replacement is confirmed.
+- Increment 12: large-file/long-line benchmarks (N02) — deterministic `BenchmarkCorpora` sized against the parse budgets plus `FolioBenchmarkProbe` measuring parse, per-keystroke incremental reparse, link scan and excerpt; timings are recorded evidence for the `inputAndLargeDocumentCorrectness` gate and are never asserted.
 
 The focused encrypted suite has **56 passing tests** from Increment 07 (hostile-input, atomic-rebuild and encrypted-session coverage; primitive known-answer tests include AES-GCM, HKDF and Argon2id), plus **23 working-store/session tests (Increment 08) and 10 durability-model tests (Increment 09) that must still be executed** in a Swift-capable environment before counting as evidence. The full regression/package evidence remains bounded Linux evidence pending Mac validation.
 

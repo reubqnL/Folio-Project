@@ -1,14 +1,13 @@
-# Implementation tracker — Increment 11
+# Implementation tracker — Increment 12
 
-**Estimated completion: 45% (weighted planning estimate). Release/security readiness: blocked. Owner testing: HOLD.**
+**Estimated completion: 46% (weighted planning estimate). Release/security readiness: blocked. Owner testing: HOLD.**
 
 All 50 decisions remain authoritative. Every user-facing progress update includes the estimate and completed work; code/test counts do not imply production security.
 
 ## Added/tested in the core
 
-- `NoteLinkRepair` (N02 compact link repair; baseline §4.2, decision 12): broken and ambiguous note links are visible and repairable. A span-preserving scanner recognises authored note links with exactly `MarkdownInlineParser`/`GraphLinkExtractor` semantics (pinned by equivalence tests) and records exact target spans; only verbatim-round-tripping targets are rewritable.
-- Confirmed single-link rewrites: labels and `|alias` survive, `#section` anchors and authored form (title vs path) are preserved, every edit is digest-bound to its source (stale application refuses) and blocked if the replacement would not re-parse as a note link at the same site. The original link is kept until the replacement is confirmed; refusals never change the note.
-- 24 focused tests: scanner/parser/graph equivalence over an adversarial corpus, block-kind and table-cell policy (including the pipe-split and escaped-pipe behaviours), CRLF/emoji span round-trips, resolution inspection, form-preserving replacement text, single-occurrence rewrites, stale/span/blocked refusals, and the `repairLinks` command's reachability and note scoping. Suite total is now 412 test functions in source.
+- `BenchmarkCorpora`/`BenchmarkStatistics` + `FolioBenchmarkProbe` (N02 "large-file/long-line benchmarks"; decision 26 / gate `inputAndLargeDocumentCorrectness`): deterministic named corpora sized against `MarkdownLimits` and measured editor-critical paths (full parse, per-keystroke incremental reparse including a splice-only figure, link scan, excerpt) with median/p95/min, table or JSON output. Timings are printed and never asserted (decision 50 — no waiver path); they become evidence only when recorded on the release machine via `scripts/run-benchmarks.sh`.
+- 9 focused tests: corpus determinism and unique edit markers, budget targeting (near/over the parse cap, line cap), parse outcomes including the limitation path, incremental-vs-full parse equality on every corpus, link-scan span round-trips, statistics definitions (median odd/even, nearest-rank p95, empty input). Suite total is now 421 test functions in source.
 
 ## Native source updated; unverified on Mac
 
@@ -16,7 +15,7 @@ All 50 decisions remain authoritative. Every user-facing progress update include
 
 ## Current evidence and limits
 
-- **The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures.** This increment's sources and tests pass full swift-syntax parsing (115 Swift files, 0 syntax failures).
+- **The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures.** This increment's sources and tests pass full swift-syntax parsing (118 Swift files, 0 syntax failures).
 - The Increment 10 reparse algorithm additionally survived 32,000 randomized edit-sequence equivalence checks via an out-of-repository Python mirror of the same algorithm — design evidence only; the harness is not shipped and does not replace the Swift run.
 - This development environment cannot install a Swift toolchain (network policy), so the new tests have not been executed here. They must pass `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence; unrun evidence is blocking, not a pass.
 - The storage barrier's APFS/power-loss behaviour is unverified; the labels claim exactly the fsync/exchange/parent-flush barrier and no more.

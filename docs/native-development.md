@@ -24,7 +24,7 @@ The percentage is a weighted planning estimate, not measured security or correct
 
 ## Evidence obtained on Linux
 
-- **333 core XCTest cases pass in Debug and Release on the recorded Linux runs.** Increments 08–11 add 23 working-store/session tests, 10 durability-model tests, 23 incremental-reparse tests and 24 link-repair tests (412 total) whose execution still has to run on a Swift toolchain before counting as evidence.
+- **333 core XCTest cases pass in Debug and Release on the recorded Linux runs.** Increments 08–12 add 23 working-store/session tests, 10 durability-model tests, 23 incremental-reparse tests, 24 link-repair tests and 9 benchmark tests (421 total) whose execution still has to run on a Swift toolchain before counting as evidence.
 - **69 generated workflow/process scenarios pass:** 13 note storage, 12 roadmap storage, 11 reading, 10 planning/graph, 11 capture/storage and 12 synthetic speech/handoff.
 - **6 separate C audio-ring checks pass with AddressSanitizer and UndefinedBehaviorSanitizer**, including 100,000 accepted threaded frames.
 - C warning/static-analysis checks cover Linux sources. Mac Swift is syntax-parsed only.
@@ -86,6 +86,15 @@ The supplied logo remains unchanged. The workspace retains one current source ar
 
 ## Encrypted `.rdm` container
 
-The active source contains a pinned Argon2id implementation, AES-256-GCM/HKDF adapters, strict ZIP64 encrypted manifest/object transport, passphrase/recovery slots and an atomic checkpoint actor. Increment 08 adds the persistent encrypted local working store (chained sealed draft records with fail-closed stale review) and the encrypted derived-index cache. Increment 09 adds the explicit N01 durability acknowledgement model (`VaultDurability` with separate checkpoint and sync axes) so the UI cannot display queued or timed work as saved. Increment 10 adds the incremental Markdown reparse (`MarkdownReparseSession`) so the reading preview re-parses only the changed region per keystroke with parse-equal splicing and full-parse fallback. Increment 11 adds compact link repair (`NoteLinkRepair`) so broken and ambiguous note links are visible and repaired one confirmed link at a time without rewriting the note. The recorded encrypted suite has 56 passing tests from Increment 07, with 23 working-store/session tests (08), 10 durability-model tests (09), 23 incremental-reparse tests (10) and 24 link-repair tests (11) pending execution; the last full core runs have 333 Debug and 333 Release tests passing on Linux.
+The active source contains a pinned Argon2id implementation, AES-256-GCM/HKDF adapters, strict ZIP64 encrypted manifest/object transport, passphrase/recovery slots and an atomic checkpoint actor. Increment 08 adds the persistent encrypted local working store (chained sealed draft records with fail-closed stale review) and the encrypted derived-index cache. Increment 09 adds the explicit N01 durability acknowledgement model (`VaultDurability` with separate checkpoint and sync axes) so the UI cannot display queued or timed work as saved. Increment 10 adds the incremental Markdown reparse (`MarkdownReparseSession`) so the reading preview re-parses only the changed region per keystroke with parse-equal splicing and full-parse fallback. Increment 11 adds compact link repair (`NoteLinkRepair`) so broken and ambiguous note links are visible and repaired one confirmed link at a time without rewriting the note. The recorded encrypted suite has 56 passing tests from Increment 07, with 23 working-store/session tests (08), 10 durability-model tests (09), 23 incremental-reparse tests (10), 24 link-repair tests (11) and 9 benchmark tests (12) pending execution; the last full core runs have 333 Debug and 333 Release tests passing on Linux.
 
 This is not production encryption approval. Mac CryptoKit/APFS parity, Keychain/device-slot runtime validation, recovery rotation, on-demand encrypted object caching, fuzzing, power-loss, migration and independent cryptographic review remain open. Read `../architecture/ENCRYPTED-RDM-CONTRACT.md`; do not use it for sensitive projects.
+
+
+## Benchmark protocol (decision 26; gate `inputAndLargeDocumentCorrectness`)
+
+Measured large-document performance is a release gate with no waiver path (decision 50). The harness is `FolioBenchmarkProbe` over deterministic `BenchmarkCorpora` (names and sizes are evidence API):
+
+- `bash scripts/run-benchmarks.sh` release-builds the probe and records `Evidence/benchmarks.json` (not committed) plus a human table.
+- Operations measured per corpus: full parse, session init + one-edit reparse, splice-only one-edit reparse (near-budget note), link scan, excerpt. Reported as median/p95/min over repeated samples after warmups.
+- Timings are **never asserted** in tests. They count as evidence only when produced on the machine class that will sign the release, recorded together with machine model, OS and thermal state, and reviewed against the acceptance thresholds (which are set only after a first recording — none exist yet).

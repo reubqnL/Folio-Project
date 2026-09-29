@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 45,
+  "estimated_percent": 46,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -18,7 +18,7 @@
     {
       "area": "Native editing, reading and accessibility",
       "weight": 15,
-      "credited_points": 9
+      "credited_points": 10
     },
     {
       "area": "Roadmap and connections",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 11: compact link repair (N02) \u2014 NoteLinkRepair finds authored note links at exact source spans (scanner pinned to the inline parser and knowledge graph) and applies one confirmed replacement at a time with digest-bound edits, form/anchor preservation and blocked/stale refusals; 24 new tests (412 total, new tests unrun here; recorded full run remains Increment 07's 333).",
-  "current_work": "Execution of the Increment 08/09/10/11 suites in a Swift-capable environment, then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage for the working slots and save barriers, and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
+  "last_completed": "Increment 12: large-file/long-line benchmark harness (N02) \u2014 deterministic BenchmarkCorpora sized against MarkdownLimits plus FolioBenchmarkProbe measuring parse, per-keystroke incremental reparse, link scan and excerpt (median/p95/min, printed and never asserted); 9 new tests (421 total, new tests unrun here; recorded full run remains Increment 07's 333). Measurements themselves remain unrecorded until the probe runs on the release machine.",
+  "current_work": "Execution of the Increment 08-12 suites and the benchmark probe in a Swift-capable environment (scripts/test-core.sh, scripts/run-benchmarks.sh), then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage for the working slots and save barriers, and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
   "history": [
     {
       "increment": "04",
@@ -93,6 +93,11 @@
       "increment": "11",
       "estimate": 45,
       "basis": "Native editing/reading area credited 9/15 for the tested-design compact link repair (span-exact link scanning with parser/graph equivalence tests, digest-bound single-link rewrites that keep the original until confirmed); no credit for a rendered-preview broken-link marker. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "12",
+      "estimate": 46,
+      "basis": "Native editing/reading area credited 10/15 for the benchmark harness that decision 26 requires as release-gate evidence (deterministic corpora + measured editor-critical paths, timings never asserted); no credit for measured performance itself \u2014 no measurements exist until the probe runs on the release machine. New tests not yet executed in a Swift-capable environment do not raise the credit further."
     }
   ]
 }

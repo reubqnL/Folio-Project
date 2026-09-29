@@ -1,3 +1,16 @@
+# Increment 12 — large-file/long-line benchmark harness (N02)
+
+## Added
+
+- `BenchmarkCorpora` + `BenchmarkStatistics` (`Sources/FolioCore/Markdown/MarkdownBenchmarks.swift`): deterministic, named benchmark inputs sized against `MarkdownLimits` — a realistic small note, 256 KB and near-budget (500 KB) mixed-construct notes, an over-budget note that must take the limitation/excerpt path, 16 lines of ~30K characters just under the line-length cap, 9,992 blocks just under the rendering budget, and a mixed-construct stress note (front matter, setext, tables with escapes, emoji, wikilinks). Names and shapes are evidence API so recorded measurements stay comparable across machines and runs.
+- `FolioBenchmarkProbe` (`Sources/FolioBenchmarkProbe/`) — measures the editor-critical paths over those corpora: full parse, per-keystroke incremental reparse (allocation-honest, plus a splice-only figure on the near-budget note), link scan and excerpt. Warmups + repeated samples; median/p95/min printed as a table or `--json` machine-readable output. **Timings are printed, never asserted anywhere** — they become evidence only when recorded on the machine class that will sign the release (decision 26; decision 50 gives that gate no waiver path).
+- `scripts/run-benchmarks.sh` — release-builds the probe and records `Evidence/benchmarks.json` (Evidence/ stays uncommitted; attach the JSON and machine details when crediting the gate).
+- 9 focused tests (421 total in source): corpus determinism, unique names and exactly one edit marker per corpus, budget targeting (near-budget under the parse cap, over-budget over it, long lines under the line cap), parse outcomes on every corpus including the limitation path, incremental-vs-full parse equality on every corpus, link-scan span round-trips on the stress corpus, and the statistics definitions (median odd/even, nearest-rank p95, empty input never traps).
+
+## Notes
+
+- No measurements are recorded yet: this environment cannot build Swift. The harness is ready; `bash scripts/run-benchmarks.sh` on an Apple Silicon Mac produces the evidence for the `inputAndLargeDocumentCorrectness` release gate.
+
 # Increment 11 — compact link repair (N02)
 
 ## Added
