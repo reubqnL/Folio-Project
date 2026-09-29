@@ -56,8 +56,38 @@ struct NoteCreationSeed {
     let markdown: String
 }
 
-struct KnownProjectIdentity: Codable {
+/// A project Folio has opened before, so it can be offered in Open Recent.
+///
+/// The folder is remembered as a security-scoped bookmark rather than a path:
+/// this build is sandboxed, so only a user-selected URL — or a bookmark derived
+/// from one — carries permission to read the folder again. `folderPath` is kept
+/// separately and is used only for display.
+struct KnownProjectIdentity: Codable, Identifiable {
     let projectID: UUID
     let rootIdentity: String
     let name: String
+    /// `var` with no default: entries written before Open Recent existed decode
+    /// with this key absent, which `Codable` maps to `nil` rather than failing.
+    var bookmark: Data?
+    var folderPath: String?
+
+    var id: UUID { projectID }
+
+    /// Turns the stored bookmark back into a folder URL.
+    ///
+    /// Returns `nil` when the project was recorded by a build that did not save
+    /// a bookmark, when the folder has been moved or deleted, or when the
+    /// bookmark can no longer be resolved.
+    func resolveFolderURL() -> URL? {
+        guard let bookmark else { return nil }
+        var stale = false
+        let url = try? URL(
+            resolvingBookmarkData: bookmark,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &stale
+        )
+        return url
+    }
 }
+

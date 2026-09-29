@@ -17,7 +17,7 @@ public enum FolioCommandID: String, CaseIterable, Codable, Hashable, Sendable, I
         case .showSource: "Editor: Source"
         case .showPreview: "Editor: Preview"
         case .showSplit: "Editor: Split"
-        case .followCursor: "Preview: Follow Cursor"
+        case .followCursor: "Preview: Jump to Cursor"
         case .refresh: "Refresh Project"
         case .recovery: "Review Recovery Copies…"
         case .showLauncher: "Show Launcher"

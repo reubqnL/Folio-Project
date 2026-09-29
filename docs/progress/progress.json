@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 13's layout policy is now verified in Swift: the owner's Mac reached commit 188314e and `scripts/test-core.sh` reported 437 Debug and 437 Release tests with 0 failures on macOS 27.0.1 / arm64 / Swift 6.4, all six probes PASS, the 13 storage and 12 roadmap SIGKILL scenarios PASS, and the ASan/UBSan audio ring PASS. All 16 WorkspaceLayoutPolicyTests executed for the first time and passed, including the `isCompact == false` assertion that had been flagged as the most likely failure. Not covered: the app target (`App/`) is built only by `scripts/run-app.sh`, which had not been run, so no view edit has been compiled and no responsiveness checklist item can be checked.",
-  "current_work": "Run `bash scripts/run-app.sh` from the branch checkout: it generates Folio.xcodeproj, builds the Folio Xcode target (the first compile of any App/ source), ad-hoc signs it outside the synced folder and launches it. Then walk the 16-item responsiveness checklist on the disposable FOLIO TEST project at wide, normal and smallest supported (1040x640) window sizes: Notes/Roadmap/Connections switching, resize-to-floor behaviour, Split in a normal window, typing in Split, and control hit-testing after resizing. Every item is unchecked until then, and live microphone/speech testing stays blocked until the UI is stable.",
+  "last_completed": "First successful app run: scripts/run-app.sh built and launched the Folio app target, and the owner reports that resizing works, elements no longer disappear, and Notes/Roadmap/Connections switching works from both the toolbar and the sidebar. Fixed in 2b4eee6: CaptureController.clear() no longer claims a cancellation that never happened, two chrome labels (roadmap window date, connections legend) are pinned to one line, \"Follow cursor\" is relabelled \"Jump to Cursor\" with a confirmation since it is a one-shot action, and File > Open Recent was added using security-scoped bookmarks for a previously-open project list that was being recorded but never read. Unverified source: none of 2b4eee6 has been compiled or run.",
+  "current_work": "Reproduce and fix the remaining layout defect: character-by-character vertical text, reported as present in every area at any window size including fullscreen, so it is not the narrow-window wrapping the previous round addressed. The owner is providing a screenshot of the narrow window. After that: rebuild with scripts/run-app.sh and re-check the responsiveness checklist on FOLIO TEST, confirm the capture panel no longer reports a phantom cancellation, and verify Open Recent reopens FOLIO TEST from the File menu without the open panel.",
   "history": [
     {
       "increment": "04",
@@ -113,6 +113,11 @@
       "increment": "13c",
       "estimate": 46,
       "basis": "No score change: the arithmetic and its 16 tests are now proven on the branch commit (437/437 Debug+Release, 0 failures, all probes and process scenarios PASS), but the reported UI defects live in the SwiftUI layer, which has not been compiled at all — `test-core.sh` builds only the SwiftPM package. Credit is held until the app target builds and the checklist is walked."
+    },
+    {
+      "increment": "13d",
+      "estimate": 46,
+      "basis": "No score change. The layout work now has its first runtime evidence (resizing and section switching confirmed working by the owner), which strengthens the same credit already counted, and one confirmed defect was found and fixed from that run. The dominant remaining defect — vertical character-by-character text at every window size — is still unreproduced, and the new fixes are unverified source, so no additional credit is claimed."
     }
   ]
 }

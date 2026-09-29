@@ -31,6 +31,20 @@ struct FolioApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 MappedCommandButton(session: session, command: .openProject)
+                Menu("Open Recent") {
+                    if session.recentProjects.isEmpty {
+                        Button("No Recent Projects") {}.disabled(true)
+                    } else {
+                        // Newest first: the list is stored with the newest last.
+                        ForEach(session.recentProjects.reversed()) { known in
+                            Button(known.name) { Task { await session.openRecentProject(known) } }
+                                .help(known.folderPath ?? known.name)
+                        }
+                        Divider()
+                        Button("Clear Menu") { session.clearRecentProjects() }
+                    }
+                }
+                .disabled(session.isOpening || session.recentProjects.isEmpty)
                 MappedCommandButton(session: session, command: .newNote)
             }
             CommandGroup(after: .newItem) { MappedCommandButton(session: session, command: .save) }

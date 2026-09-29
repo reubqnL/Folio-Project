@@ -34,6 +34,11 @@ struct MarkdownPreviewView: View {
     @State private var previewNotice: String?
     @State private var reparseSession: MarkdownReparseSession?
     @State private var reparseMode: PreviewParseMode?
+    /// Shown briefly after "Jump to Cursor" runs, so a one-shot action that can
+    /// have no visible effect (the preview may already be at the cursor) still
+    /// tells the user it happened.
+    @State private var jumpedToCursor = false
+    @State private var jumpCount = 0
 
     private var currentPreview: MarkdownDocument? { parsedDocumentID == document.id ? parsed : nil }
     private var renderKey: PreviewRenderKey {
@@ -45,8 +50,25 @@ struct MarkdownPreviewView: View {
                 Text(excerptApproved ? "Reading preview · excerpt" : "Reading preview").font(.caption.weight(.semibold))
                 if parsing { ProgressView().controlSize(.mini) }
                 Spacer()
-                Button { session.followSourceCursor() } label: { Label("Follow cursor", systemImage: "scope") }
-                    .controlSize(.small)
+                // A one-shot action, not a mode: it scrolls this preview to the
+                // cursor once. The old label "Follow cursor" read like a toggle
+                // that never showed whether it was on, so it is named for what
+                // it does and confirms itself each time it runs.
+                Button {
+                    session.followSourceCursor()
+                    jumpedToCursor = true
+                    jumpCount += 1
+                } label: {
+                    Label("Jump to Cursor", systemImage: "scope")
+                }
+                .controlSize(.small)
+                .help("Scroll this preview to the cursor once. It does not keep tracking while you type.")
+                if jumpedToCursor {
+                    Text("Jumped")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(FolioStyle.gold)
+                        .transition(.opacity)
+                }
             }.padding(.horizontal, 16).padding(.vertical, 10)
             Divider()
             if let parsed = currentPreview, parsed.isLimited {
@@ -94,6 +116,14 @@ struct MarkdownPreviewView: View {
         }
         .background(FolioStyle.editor)
         .accessibilityLabel("Markdown reading preview")
+        // A counter, not the flag itself: clicking twice in a row restarts the
+        // confirmation instead of the second click being silently swallowed by
+        // the first one's pending clear.
+        .task(id: jumpCount) {
+            guard jumpedToCursor else { return }
+            try? await Task.sleep(for: .seconds(1.4))
+            jumpedToCursor = false
+        }
         .task(id: renderKey) {
             guard isVisible else { return }
             parsing = true

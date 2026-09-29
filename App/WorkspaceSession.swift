@@ -9,6 +9,10 @@ final class WorkspaceSession {
     enum Destination: Equatable { case launcher, notes, encrypted }
     enum WorkspaceSection: String, CaseIterable { case notes, roadmap, connections }
     var workspaceSection: WorkspaceSection = .notes
+    /// Projects opened before, newest last, for the File → Open Recent menu.
+    /// Loading this at construction is what makes the menu useful in a fresh
+    /// launch, before any project has been opened in this session.
+    var recentProjects: [KnownProjectIdentity] = []
     /// These panes are shown or hidden because the user asked, never because a
     /// window crossed a width threshold. `WorkspaceLayoutPolicy` only ever
     /// narrows them toward a minimum, so section switching and resizing cannot
@@ -64,6 +68,12 @@ final class WorkspaceSession {
     @ObservationIgnored private var captureUndoCommands = Set<UUID>()
     @ObservationIgnored private var voiceAfterComposer = false
     @ObservationIgnored private var encryptedCopyTask: Task<Void, Never>?
+
+    /// Loads Open Recent at construction so the menu is populated in a fresh
+    /// launch, before any project has been opened in this process.
+    init() {
+        recentProjects = loadKnownProjects()
+    }
 
     var selectedDocument: OpenNoteDocument? { selectedNoteID.flatMap { documents[$0] } }
     var rootURL: URL? { store?.rootURL }
@@ -179,7 +189,47 @@ final class WorkspaceSession {
             panel.begin { response in continuation.resume(returning: response) }
         }
         guard result == .OK, let url = panel.url else { return }
-        let grant = ScopedProjectFolder(url)
+        await openProject(at: url, grant: ScopedProjectFolder(url), mayCreate: true)
+    }
+
+    /// Reopens a project from File → Open Recent.
+    ///
+    /// Access comes from the stored security-scoped bookmark, so no panel is
+    /// shown. A project whose folder has moved, been deleted or lost its
+    /// permission is reported and forgotten rather than silently opening
+    /// somewhere else or overwriting anything.
+    func openRecentProject(_ known: KnownProjectIdentity) async {
+        guard !isOpening, !showingNewNote, planning.editRequest == nil else { return }
+        guard let url = known.resolveFolderURL() else {
+            forgetRecentProject(known.projectID)
+            errorMessage = "Folio can no longer reach “\(known.name)”. It was moved, deleted, or its permission was reset. Use Open Project Folder… and Folio will remember it again."
+            return
+        }
+        isOpening = true
+        defer { isOpening = false }
+        guard await flushAll() else {
+            errorMessage = "Resolve the current project's unsaved or conflicting edits before switching projects."
+            return
+        }
+        await openProject(at: url, grant: ScopedProjectFolder(url), mayCreate: false)
+    }
+
+    /// Removes one entry from Open Recent. Used when a bookmark can no longer
+    /// be resolved, so a permanently broken entry is not offered forever.
+    func forgetRecentProject(_ id: UUID) {
+        recentProjects.removeAll { $0.projectID == id }
+        saveRecentProjects()
+    }
+
+    func clearRecentProjects() {
+        recentProjects = []
+        saveRecentProjects()
+    }
+
+    /// The shared body of opening a folder, used by both the open panel and
+    /// Open Recent. `mayCreate` is false for Open Recent: Folio must never
+    /// offer to initialise a project in a folder the user has not just chosen.
+    private func openProject(at url: URL, grant: ScopedProjectFolder, mayCreate: Bool) async {
         do {
             let values = try url.resourceValues(forKeys: [.volumeIsLocalKey])
             guard values.volumeIsLocal == true else {
@@ -191,7 +241,7 @@ final class WorkspaceSession {
             }
             let opened: PlainVaultStore
             do { opened = try await PlainVaultStore.open(at: url) }
-            catch VaultError.needsInitialization {
+            catch VaultError.needsInitialization where mayCreate {
                 let alert = NSAlert()
                 alert.messageText = "Create a Folio project in this folder?"
                 alert.informativeText = "Folio will add a .folio metadata/recovery directory. Existing Markdown is not rewritten during import. This build has not been validated on macOS yet; use a copy, not your only copy."
@@ -201,7 +251,7 @@ final class WorkspaceSession {
             }
             do {
                 var identity = try await opened.project()
-                let known = loadKnownProjects()
+                let known = recentProjects
                 var fork = false
                 if let previous = known.first(where: { $0.projectID == identity.id }), previous.rootIdentity != opened.rootIdentity {
                     let alert = NSAlert()
@@ -826,14 +876,36 @@ final class WorkspaceSession {
         notes.removeAll { $0.id == note.id }; notes.append(note)
         notes.sort { $0.relativePath.localizedStandardCompare($1.relativePath) == .orderedAscending }
     }
-    private func loadKnownProjects() -> [KnownProjectIdentity] {
+    func loadKnownProjects() -> [KnownProjectIdentity] {
         guard let data = UserDefaults.standard.data(forKey: "knownProjectIdentities") else { return [] }
         return (try? JSONDecoder().decode([KnownProjectIdentity].self, from: data)) ?? []
     }
+    private func saveRecentProjects() {
+        let bounded = Array(recentProjects.suffix(50))
+        recentProjects = bounded
+        if let data = try? JSONEncoder().encode(bounded) {
+            UserDefaults.standard.set(data, forKey: "knownProjectIdentities")
+        }
+    }
     private func recordProject(_ project: VaultProject, rootIdentity: String) {
-        var known = loadKnownProjects().filter { $0.projectID != project.id }
-        known.append(.init(projectID: project.id, rootIdentity: rootIdentity, name: project.name))
-        if let data = try? JSONEncoder().encode(Array(known.suffix(50))) { UserDefaults.standard.set(data, forKey: "knownProjectIdentities") }
+        // The bookmark is what allows Open Recent to reopen this folder without
+        // asking the user to pick it again; the sandbox does not grant access to
+        // a remembered path on its own.
+        let bookmark = try? folderGrant?.url.bookmarkData(
+            options: .withSecurityScope,
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+        var known = recentProjects.filter { $0.projectID != project.id }
+        known.append(.init(
+            projectID: project.id,
+            rootIdentity: rootIdentity,
+            name: project.name,
+            bookmark: bookmark,
+            folderPath: folderGrant?.url.path
+        ))
+        recentProjects = known
+        saveRecentProjects()
     }
     func showPasteNotice(_ message: String, undo: @escaping () -> Void) { pasteMessage = message; pasteUndoAction = undo }
     func clearPasteNotice() { pasteMessage = nil; pasteUndoAction = nil }
