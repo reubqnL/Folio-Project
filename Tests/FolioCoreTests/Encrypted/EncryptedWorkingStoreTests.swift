@@ -252,7 +252,7 @@ final class EncryptedWorkingStoreTests: XCTestCase, @unchecked Sendable {
         let notes = [RDMNote(id: UUID(), path: "Notes/Alpha.md", markdown: "alpha body"),
                      RDMNote(id: UUID(), path: "Notes/Beta.md", markdown: "beta body")]
         try await store.writeIndexCache(snapshotID: head, notes: notes)
-        let loaded = try await store.loadIndexCache(snapshotID: head)
+        let loaded = await store.loadIndexCache(snapshotID: head)
         XCTAssertEqual(loaded, notes)
         let otherSnapshot = await store.loadIndexCache(snapshotID: String(repeating: "cd", count: 32))
         XCTAssertNil(otherSnapshot)
