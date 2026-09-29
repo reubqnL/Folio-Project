@@ -57,7 +57,7 @@ final class MarkdownIncrementalTests: XCTestCase {
 
     private func assertSingle(_ before: String, _ after: String, _ label: String,
                               file: StaticString = #filePath, line: UInt = #line) {
-        assertChain(initial: before, edits: [{ _ in (0..<$0.utf16.count, after) }], label, file: file, line: line)
+        assertChain(initial: before, edits: [{ source in (0..<source.utf16.count, after) }], label, file: file, line: line)
     }
 
     // MARK: - Adversarial splice swallows
