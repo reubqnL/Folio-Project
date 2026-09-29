@@ -1,6 +1,6 @@
 # Folio — feature-complete handoff checklist
 
-**Estimated completion: 41% (weighted planning estimate, not security/correctness) · User-testing status: HOLD.** You asked to test only after the approved Mac feature set is complete. Development and engineering verification continue; these source packages are not requests for you to beta-test unfinished features.
+**Estimated completion: 42% (weighted planning estimate, not security/correctness) · User-testing status: HOLD.** You asked to test only after the approved Mac feature set is complete. Development and engineering verification continue; these source packages are not requests for you to beta-test unfinished features.
 
 ## Scope retained from your decisions
 
@@ -18,14 +18,14 @@ The initial product is native macOS FolioNotes. FolioDev stays visible but disab
 | Connections graph | Shared note/task/dependency model, one-hop 2D default, clusters/list, opt-in 3D math, native Metal source | Real Metal shader/device/UI testing, accessible interaction and performance/battery budgets |
 | AI capture | Tested context/approval/cancellation/review/apply core; native composer/editor bridge and Apple local-model adapter source | Real Mac SDK/inference/quality/resource tests; native undo/rollback and integration hardening |
 | Speech | Tested lifecycle/consent/PCM/transcript policy, native microphone/SpeechAnalyzer source and review UI | Actual Mac TCC/audio/conversion/teardown/asset/ASR quality and accessibility/resource evidence; text fallback remains mandatory |
-| `.rdm` encrypted projects | Bounded crypto/archive/checkpoint foundation; 56 focused tests passing, including hostile-input, atomic-rebuild and encrypted-session coverage; explicit session-bound preview/editor, reviewed checkpoint-draft and non-destructive plain-to-encrypted-copy source; single-file atomic checkpoint source; bounded memory-only derived index | Persistent encrypted working store/index, CryptoKit/Mac runtime validation, Keychain/recovery UX, editing/runtime accessibility validation, fuzzing, power-loss, independent review and migrations |
+| `.rdm` encrypted projects | Bounded crypto/archive/checkpoint foundation; 56 focused tests passing, including hostile-input, atomic-rebuild and encrypted-session coverage; explicit session-bound preview/editor, reviewed checkpoint-draft and non-destructive plain-to-encrypted-copy source; single-file atomic checkpoint source; persistent encrypted working store (chained draft records with fail-closed stale review) and encrypted derived-index cache with in-memory rebuild fallback | Execution of the working-store test additions, CryptoKit/Mac runtime validation, Keychain/recovery UX, editing/runtime accessibility validation, fuzzing, power-loss, independent review and migrations |
 | E2EE collaboration | Specification only | Maintained CRDT/MLS integration, service/identity/membership, long-offline merge, revocation/history safeguards and independent review |
 | Installer / updates | Specification and local development build script | Developer ID ownership/signing, notarization/stapling, professional `.pkg`, updater, rollback and migration evidence |
 | Release trust | Blocking policy implemented | Every actual required check must pass; no waiver path |
 
 ## Latest engineering evidence
 
-Increment 07 has **333 core tests passing in the Debug and Release runs**; the encrypted foundation includes **56 focused crypto/archive/checkpoint/working-index/hostile-input/session tests passing**. Existing workflow/process checks and audio sanitizers remain. Crypto tests include published AES-GCM/HKDF/Argon2 vectors; archive tests use no plaintext canaries and stale-checkpoint cases. `PROGRESS.md` explains the 41% estimate and weighted scope. The recorded full-regression evidence and current source archive are retained; Mac/runtime and release gates remain open.
+Increment 07 has **333 core tests passing in the Debug and Release runs**; the encrypted foundation includes **56 focused crypto/archive/checkpoint/working-index/hostile-input/session tests passing**. Increment 08 (persistent encrypted working storage) adds 23 focused tests whose execution must still run in a Swift-capable environment before counting as evidence; its sources pass full swift-syntax parsing. Existing workflow/process checks and audio sanitizers remain. Crypto tests include published AES-GCM/HKDF/Argon2 vectors; archive tests use no plaintext canaries and stale-checkpoint cases. `PROGRESS.md` explains the 42% estimate and weighted scope. The recorded full-regression evidence and current source archive are retained; Mac/runtime and release gates remain open.
 
 This proves those bounded core scenarios, not a complete Mac product. The environment cannot run Xcode/AppKit/Metal, and no Mac `.app` or installer has been built. Native execution, physical power-loss, performance/accessibility and independent security evidence remain outstanding.
 

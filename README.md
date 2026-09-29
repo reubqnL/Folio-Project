@@ -1,30 +1,76 @@
-# Folio
+# <img src="assets/folio-app-icon.png" alt="The Folio icon: a sleek F with a vibrant yellow feather" width="72" align="top"> Folio is an AI-driven application
 
-Folio is a native macOS application for writing, linking and planning with
-Markdown notes. It combines a local-first plain-Markdown vault with a knowledge
-graph, a roadmap/timeline planner, on-device speech capture and an experimental
-encrypted `.rdm` project container.
+**The new 2-in-1 AI-driven Personal Project Management & Integrated Development Environment application.**
 
-The app is written in Swift 6 with SwiftUI, AppKit and Metal. The core logic is
-a portable Swift/C package that is tested on Linux; the Mac application layer is
-built on an Apple Silicon Mac with Xcode.
+Folio combines a local-first Markdown knowledge workspace (**FolioNotes**) with an
+integrated development environment (**FolioDev**) in one native macOS application.
+It is written in Swift with SwiftUI, AppKit and Metal.
 
-> **Status: development source, not a release.** Increment 07 · estimated 41% of
-> the approved Mac scope · release blocked · owner testing on hold. The estimate
-> is a weighted planning figure, not a security or correctness score. Read
-> [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) before relying on any
-> part of this repository.
+> **Status: development source, not a released product.** FolioNotes is the
+> active focus and ships first; FolioDev is present in the interface but stays
+> deliberately disabled until its real capabilities are ready. Nothing in this
+> repository should be treated as production-ready yet — see
+> [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) for the engineering
+> status before relying on any part of it.
 
 ---
 
-## Repository map
+## What Folio is
+
+### FolioNotes
+
+A local-first personal project and knowledge management environment:
+
+- **Markdown projects** — your notes remain plain Markdown files in a folder you
+  choose; Folio never rewrites your front matter or moves files behind your back.
+- **Editor & preview** — native Markdown editing with source, preview and split
+  layouts.
+- **Search** — fast local full-text search across your project.
+- **Command palette & shortcuts** — keyboard-first navigation, with protected
+  mappings so remapping never breaks native editing shortcuts.
+- **Roadmaps & timeline** — structured tasks and milestones with a timeline,
+  Kanban-style board and an Unscheduled tray.
+- **Connections graph** — a knowledge graph over notes, tasks and dependencies:
+  2D by default, opt-in 3D.
+- **AI-assisted capture** — review-first workflows that show exactly what context
+  the assistant sees and require your approval before anything is written.
+- **Voice capture** — on-device speech input with explicit recording controls and
+  transcript review; a text entry path always remains available.
+- **Encrypted projects (experimental)** — a single-file `.rdm` container with
+  passphrase and recovery-code protection for sensitive project material.
+
+### FolioDev
+
+The long-term goal is to connect roadmap and project entities with real source
+code: repository-linked notes, read-only source preview and traceable planning.
+FolioDev is intentionally disabled in the current builds; it will be introduced
+only when those capabilities actually exist. Folio will never present
+functionality that is not implemented.
+
+## Design
+
+Folio is built to feel like a serious professional desktop application: the
+knowledge-management and graph concepts of Obsidian, the information density and
+workflow discipline of JetBrains IDEs, and a polished, high-contrast dark
+macOS-native experience with smooth animations, clear hierarchy and careful
+keyboard and mouse support. Its visual identity is the Folio **F** with the
+vibrant yellow feather.
+
+## Platform strategy
+
+macOS is the first and current platform. Windows parity and an Android
+read-only preview are planned only after the macOS product and its security
+gates are complete — Folio is developed Mac-first rather than diluted across
+platforms prematurely.
+
+## Repository layout
 
 ```
 Folio/
-├── Package.swift        SwiftPM manifest (library, probes, tests)
+├── Package.swift        SwiftPM manifest (portable core, probes, tests)
 ├── project.yml          XcodeGen spec that generates the macOS app target
 │
-├── App/                 SOURCE — macOS application (SwiftUI/AppKit/Metal)
+├── App/                 macOS application (SwiftUI / AppKit / Metal)
 │   ├── Capture/         AI capture proposal + review flow
 │   ├── Commands/        Command palette and shortcut preferences
 │   ├── Editor/          Native Markdown editor and preview
@@ -32,13 +78,11 @@ Folio/
 │   ├── Graph/           Knowledge graph view (Metal) and controller
 │   ├── Planning/        Roadmap and timeline UI
 │   ├── Search/          Local search index and UI
-│   ├── Speech/          On-device voice capture (AVAudioEngine/SpeechAnalyzer)
+│   ├── Speech/          On-device voice capture
 │   ├── Views/           Launcher, workspace, settings, recovery
-│   ├── Resources/       ASSETS compiled into the app (asset catalogue)
-│   ├── Info.plist       App bundle configuration
-│   └── Folio.entitlements   App Sandbox entitlements
+│   └── Resources/       App icon and logo assets
 │
-├── Sources/             SOURCE — portable core (Swift + C)
+├── Sources/             Portable core (Swift + C)
 │   ├── FolioCore/       Storage, Markdown, search, graph, planning,
 │   │                    capture, speech and encryption logic
 │   ├── FolioFileIO/     C file I/O and lock-free audio ring buffer
@@ -47,44 +91,26 @@ Folio/
 │   ├── CSQLite/         System SQLite module map
 │   └── Folio*Probe/     Executable probes used by the test scripts
 │
-├── Tests/               SOURCE — unit and crash-recovery tests
-│   ├── FolioCoreTests/  XCTest suite (333 cases)
-│   └── AudioRingChecks/ C sanitizer harness for the audio ring buffer
-│
+├── Tests/               Unit and crash-recovery tests (XCTest + C harness)
 ├── scripts/             Build, test and verification automation
-├── tools/               Development tooling (packaging + verification)
-├── assets/              ASSETS — project branding (approved app icon)
+├── tools/               Packaging and verification tooling
+├── assets/              Project branding (approved app icon)
 │
-├── docs/                DOCUMENTATION
+├── docs/
 │   ├── architecture/    Security and behaviour contracts
 │   ├── planning/        Implementation plan, scope, recorded decisions
-│   ├── progress/        Completion estimate and evidence policy
+│   ├── progress/        Development status and completion estimate
 │   ├── design/          Browser design prototype and concept captures
 │   ├── reference/       Original baseline, roadmap workbook, handover notes
 │   ├── notices/         Third-party licence notices
-│   ├── CHANGELOG.md     Increment history
-│   └── native-development.md  Developer guide for the native build
+│   └── CHANGELOG.md     Release history
 │
-└── Evidence/            GENERATED — test reports and logs (not committed)
+└── Evidence/            Generated test reports (not committed)
 ```
 
-### What is *not* in Git
-
 Generated and machine-specific files are excluded by
-[`.gitignore`](.gitignore). Nothing in the list below is needed to build from a
-clean clone — each item is recreated on demand.
-
-| Path | Regenerated by |
-|---|---|
-| `.build/` | `swift build` |
-| `.build-output/` | `scripts/verify-on-mac.sh` |
-| `DerivedData/` | Xcode |
-| `Folio.xcodeproj/` | `xcodegen generate --spec project.yml` |
-| `Evidence/*.json`, `Evidence/*.log` | `bash scripts/test-core.sh` |
-| `Verification.json`, `SOURCE-MANIFEST.json` | `python3 tools/package-native.py` |
-| `dist/` | `python3 tools/package-native.py` |
-
----
+[`.gitignore`](.gitignore) and recreated on demand; nothing ignored is needed
+to build from a clean clone.
 
 ## Building
 
@@ -128,22 +154,15 @@ Sandbox, user-selected-file and audio-input entitlements are present.
 python3 tools/package-native.py
 ```
 
-Validates the asset catalogue, entitlements, Info.plist, YAML, shell scripts,
-C sources and evidence, then writes `dist/Folio-Source.zip` plus the
-`Verification.json` and `SOURCE-MANIFEST.json` reports.
-
----
-
 ## Documentation
 
-Start here:
-
 - [`docs/README.md`](docs/README.md) — index of all documentation
-- [`docs/native-development.md`](docs/native-development.md) — native build, gates and current state
+- [`docs/native-development.md`](docs/native-development.md) — native build and
+  developer guide
 - [`docs/CHANGELOG.md`](docs/CHANGELOG.md) — increment history
-- [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) — completion estimate and evidence policy
-- [`docs/architecture/`](docs/architecture/) — security and behaviour contracts for
-  storage, search, planning/graph, capture, speech and the encrypted container
+- [`docs/progress/PROGRESS.md`](docs/progress/PROGRESS.md) — development status
+- [`docs/architecture/`](docs/architecture/) — security and behaviour contracts
+  for storage, search, planning/graph, capture, speech and the encrypted container
 
 ## Security notes
 
@@ -151,9 +170,10 @@ Start here:
   passphrases are handled at runtime through the macOS Keychain
   (`App/Encrypted/EncryptedPassphraseKeychain.swift`); `App/Folio.entitlements`
   requests no network entitlement and there is no cloud fallback.
-- The encrypted `.rdm` container is experimental and incomplete. Read
+- The encrypted `.rdm` container and its encrypted local working copy are
+  experimental and under active hardening. Read
   [`docs/architecture/ENCRYPTED-RDM-CONTRACT.md`](docs/architecture/ENCRYPTED-RDM-CONTRACT.md)
-  before using it for anything sensitive. Plain-vault notes, roadmaps and the
-  search cache remain plaintext.
+  before using them for anything sensitive. Plain-vault notes and roadmaps
+  remain plaintext on disk.
 - Third-party code is vendored under `Sources/CArgon2` with its licence and
   provenance recorded in [`docs/notices/`](docs/notices/).

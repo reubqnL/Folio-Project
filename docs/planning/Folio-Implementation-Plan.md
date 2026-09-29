@@ -1,6 +1,6 @@
 # Folio — implementation plan after your 50 answers
 
-**Current stage: Increment 07 — encrypted `.rdm` foundation · Estimated completion: 41% · Owner testing: on hold · Release: blocked**
+**Current stage: Increment 08 — persistent encrypted working storage · Estimated completion: 42% · Owner testing: on hold · Release: blocked**
 
 Your personal answers are the product authority. They override conflicting defaults in the September 2026 baseline. The original baseline PDF, roadmap workbook and browser concept remain reference snapshots, not the current implementation or proof of working native features.
 
@@ -34,21 +34,22 @@ Your personal answers are the product authority. They override conflicting defau
 | Android later | **Read-only for this roadmap.** Editing would need a separately approved future scope. |
 | Release authority | **No exceptions to defined release blockers.** Missing or unrun evidence is blocking, not a pass. |
 
-## 2. Current build — Increment 07
+## 2. Current build — Increment 08
 
-The encrypted project foundation is now implemented as a separate, bounded subsystem:
+The encrypted project foundation is now implemented as a separate, bounded subsystem, and Increment 08 adds persistent encrypted working storage on top of it:
 
 - Pinned Argon2id v1.3 source/provenance, bounded passphrase KDF and protected secret handle.
 - AES-256-GCM/HKDF adapters, domain-separated keys/AAD, fresh revisions/nonces and recovery/passphrase slots.
 - Strict ZIP64 transport allow-list, encrypted manifest/object records, canonical schema validation and no filesystem extraction.
 - Atomic encrypted `.rdm` checkpoint store with parent lineage, stale external-head refusal and lock ownership.
 - Recovery/passphrase open, rewrap semantics and strict malformed/tampered/transplant/resource tests.
+- Increment 08: persistent encrypted working storage — chained two-slot draft records with fail-closed stale classification and reviewed resolution, an encrypted derived-index cache bound to its archive snapshot, session draft APIs and native draft staging/restore/review wiring.
 
-The focused encrypted suite has **52 passing tests**, including hostile-input, atomic-rebuild and encrypted-session coverage. Primitive known-answer tests include AES-GCM, HKDF and Argon2id. The full regression/package evidence remains bounded Linux evidence pending Mac validation.
+The focused encrypted suite has **56 passing tests** from Increment 07 (hostile-input, atomic-rebuild and encrypted-session coverage; primitive known-answer tests include AES-GCM, HKDF and Argon2id), plus **23 new working-store/session tests in Increment 08 that must still be executed** in a Swift-capable environment before counting as evidence. The full regression/package evidence remains bounded Linux evidence pending Mac validation.
 
 ### Non-completion boundary
 
-This is not yet encrypted workspace integration or a security audit. Mac CryptoKit/APFS behavior, Keychain slots, encrypted working/index/cache/WAL/temp objects, migrations, fuzzing, power-loss tests, independent crypto review and native privacy UI remain required. Current plain vaults and search caches are still plaintext.
+This is not yet encrypted workspace integration or a security audit. Mac CryptoKit/APFS behavior, Keychain slots, on-demand encrypted object caching/WAL and preview/diagnostic boundaries, migrations, fuzzing, power-loss tests, independent crypto review and native privacy UI completion remain required. Current plain vaults and search caches are still plaintext.
 
 ## 3. Ordered native build backlog
 

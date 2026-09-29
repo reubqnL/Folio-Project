@@ -1,3 +1,20 @@
+# Increment 08 — persistent encrypted working storage
+
+## Added
+
+- `RDMWorkingStore`: unsaved encrypted-project drafts persist locally as two alternating AES-256-GCM sealed slot records (`.folio/<name>.rdmworking.0/1`) chained by generation and previous-record digest, written through the atomic `.folio` staging path with no plaintext residue.
+- Fail-closed restore classification (`.empty` / `.current` / `.stale`): torn writes, missing history, single-slot rollback, mixed epochs and unauthenticated copies surface for explicit review and block further draft writes until a reviewed `resolve()` re-anchors a fresh epoch; set-aside bytes are preserved as private `.folio` copies rather than destroyed.
+- Encrypted derived-index cache (`.folio/<name>.rdmindex`) bound to its archive snapshot; cache hits warm the search index on open, and every cache failure mode falls back to the in-memory rebuild without affecting search correctness.
+- `RDMProjectSession` working-state API (`restoreWorkingState`, `stageDraft`, `discardDraft`, `resolveWorkingState`) with checkpoint-first, cache-second ordering.
+- Native encrypted UI: 250 ms debounced draft staging into the encrypted working copy, restore of the most recent unsaved draft after unlock, local-draft discard after a successful checkpoint, an explicit "Review local working copies" action, and captions that describe the real draft/index behaviour.
+- Focused tests for chaining/round trip, the stale-detection matrix, reviewed resolution with byte preservation, draft bounds/validation, plaintext canaries, index-cache round trip/corruption/snapshot binding, and session-level draft survive-close/reopen, discard, stale-block and cache fallback scenarios.
+
+## Evidence and limits
+
+The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures. This increment's sources and tests pass full swift-syntax parsing (108 Swift files, 0 syntax failures); the new test executions must run via `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence. Mac SDK/CryptoKit/APFS, power-loss, Keychain, accessibility and independent security evidence remain blocked. This is not safe for sensitive data or release; plain-vault data remains plaintext.
+
+---
+
 # Increment 07 — encrypted `.rdm` foundation
 
 ## Added

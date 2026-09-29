@@ -157,6 +157,22 @@ enum RDMAssociatedData {
         append(0, to: &data); append(1, to: &data) // Chunk index and total; v1 spike is one bounded object per record.
         field(headerDigest, into: &data); return data
     }
+    static func workingKey(_ project: UUID) -> Data {
+        var data = prefix("working-store-key"); data.append(uuid(project)); return data
+    }
+    static func workingRecord(_ project: UUID, fileID: Data, slot: Int, generation: UInt64) -> Data {
+        var data = prefix("working-store-record"); data.append(uuid(project)); field(fileID, into: &data)
+        append(UInt32(slot), to: &data)
+        append(UInt32(truncatingIfNeeded: generation >> 32), to: &data)
+        append(UInt32(truncatingIfNeeded: generation), to: &data)
+        return data
+    }
+    static func workingIndexKey(_ project: UUID) -> Data {
+        var data = prefix("working-index-key"); data.append(uuid(project)); return data
+    }
+    static func workingIndexRecord(_ project: UUID, fileID: Data) -> Data {
+        var data = prefix("working-index-record"); data.append(uuid(project)); field(fileID, into: &data); return data
+    }
 }
 
 enum RDMCanonical {

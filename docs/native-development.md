@@ -35,7 +35,7 @@ Synthetic samples/transcript events and a fixed test model are not microphone/AS
 
 Speech assets require explicit download approval; Apple manages shared models and possible retries. Recording is a separate action. No raw audio file recorder exists in Folio's source. The transcript stays in memory until explicitly reviewed and moved into Capture. That handoff does not run AI or save a note automatically.
 
-Model capture remains explicit-context, review-before-apply and stale-edit protected. Native application/undo is distinct from a successful disk save. Current plain-vault notes, roadmap/recovery and outside-vault search cache remain plaintext. Encrypted `.rdm` now has an experimental authenticated archive/checkpoint foundation, a memory-only derived index and a source-level session/preview/editor boundary; Mac runtime, editing integration and persistent encrypted storage are not complete.
+Model capture remains explicit-context, review-before-apply and stale-edit protected. Native application/undo is distinct from a successful disk save. Current plain-vault notes, roadmap/recovery and outside-vault search cache remain plaintext. Encrypted `.rdm` now has an experimental authenticated archive/checkpoint foundation, a persistent encrypted local working store (unsaved drafts) with an encrypted derived-index cache, and a source-level session/preview/editor boundary; Mac runtime, editing integration, Keychain/recovery UX completion and fault/power-loss evidence are not complete.
 
 ## Still incomplete
 

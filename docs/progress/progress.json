@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 41,
+  "estimated_percent": 42,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -33,7 +33,7 @@
     {
       "area": "Encrypted .rdm and key recovery",
       "weight": 13,
-      "credited_points": 1
+      "credited_points": 2
     },
     {
       "area": "E2EE collaboration",
