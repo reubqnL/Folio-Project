@@ -128,8 +128,15 @@ final class VaultDurabilityTests: XCTestCase {
         for _ in 0..<40 {
             latestEdit += 0.02
             let due = SaveCoalescing.deadline(firstDirty: firstDirty, latestEdit: latestEdit)
-            XCTAssertLessThanOrEqual(due, firstDirty + SaveCoalescing.boundedMaximumDelay + 0.000_001)
-            XCTAssertGreaterThanOrEqual(due, latestEdit + SaveCoalescing.editDebounce - 0.000_001)
+            let maximumDeadline = firstDirty + SaveCoalescing.boundedMaximumDelay
+            let debounceDeadline = latestEdit + SaveCoalescing.editDebounce
+            XCTAssertLessThanOrEqual(due, maximumDeadline + 0.000_001)
+            // Once the maximum-delay cap wins, the debounce target is no
+            // longer a lower bound; it is intentionally superseded by the
+            // bounded deadline.
+            if debounceDeadline <= maximumDeadline {
+                XCTAssertGreaterThanOrEqual(due, debounceDeadline - 0.000_001)
+            }
         }
     }
 }

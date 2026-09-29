@@ -49,7 +49,15 @@ final class SQLiteStatement {
 final class SQLiteConnection: @unchecked Sendable {
     private(set) var handle: OpaquePointer?
     init(file: URL) throws {
+        // Apple's SQLite rejects paths below macOS's temporary-directory symlink
+        // hierarchy when SQLITE_OPEN_NOFOLLOW is supplied. LocalSearchIndex has
+        // already validated and created the cache directory, and it validates
+        // any pre-existing database as a regular file before reaching SQLite.
+        #if canImport(Darwin)
+        let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX
+        #else
         let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW
+        #endif
         let result = sqlite3_open_v2(file.path, &handle, flags, nil)
         guard result == SQLITE_OK, handle != nil else { sqlite3_close_v2(handle); handle = nil; throw SearchIndexError.sqlite(result) }
         sqlite3_busy_timeout(handle, 150)
