@@ -10,18 +10,24 @@ struct RoadmapView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Single-line text plus fixed-size controls: when the column is
+            // narrow the label truncates instead of wrapping vertically, and no
+            // control is compressed or pushed out of the window.
             HStack(spacing: 14) {
-                Text("Roadmap").font(.title2.weight(.semibold))
+                Text("Roadmap").font(.title2.weight(.semibold)).lineLimit(1)
                 Picker("Roadmap view", selection: $planning.presentation) {
                     Text("Timeline").tag(RoadmapPresentation.timeline)
                     Text("Kanban").tag(RoadmapPresentation.kanban)
-                }.pickerStyle(.segmented).frame(width: 200)
-                Spacer()
+                }.pickerStyle(.segmented).frame(width: 200).fixedSize()
+                Spacer(minLength: 8)
                 Button { Task { await planning.undo() } } label: { Image(systemName: "arrow.uturn.backward") }.help("Undo roadmap change")
                     .disabled(!planning.history.canUndo || planning.hasUnwrittenChanges)
+                    .fixedSize()
                 Button { Task { await planning.redo() } } label: { Image(systemName: "arrow.uturn.forward") }.help("Redo roadmap change")
                     .disabled(!planning.history.canRedo || planning.hasUnwrittenChanges)
+                    .fixedSize()
                 Button("New Item…") { planning.beginNew() }.buttonStyle(.borderedProminent).disabled(planning.snapshot == nil || planning.isSaving)
+                    .fixedSize()
             }.padding(18)
             Divider()
             if let failure = planning.failure {
@@ -30,13 +36,16 @@ struct RoadmapView: View {
             }
             if let proposal = planning.pendingProposal { repairPanel(proposal) }
             if !planning.selectedIDs.isEmpty {
-                HStack {
-                    Text("\(planning.selectedIDs.count) selected").font(.caption)
+                HStack(spacing: 10) {
+                    Text("\(planning.selectedIDs.count) selected").font(.caption).lineLimit(1)
+                        .layoutPriority(-1)
                     Menu("Move…") { ForEach(RoadmapStatus.allCases, id: \.self) { status in Button(status.title) { Task { await planning.moveSelection(to: status) } } } }
-                    Button("−1 day") { shift(-1) }; Button("+1 day") { shift(1) }
-                    Button("Delete…") { confirmDelete() }
-                    Spacer()
-                    Button("Clear Selection") { planning.selectedIDs = [] }
+                        .fixedSize()
+                    Button("−1 day") { shift(-1) }.fixedSize()
+                    Button("+1 day") { shift(1) }.fixedSize()
+                    Button("Delete…") { confirmDelete() }.fixedSize()
+                    Spacer(minLength: 8)
+                    Button("Clear Selection") { planning.selectedIDs = [] }.fixedSize()
                 }.controlSize(.small).padding(.horizontal, 16).padding(.vertical, 8)
                     .disabled(planning.isSaving)
                 Divider()
@@ -46,20 +55,27 @@ struct RoadmapView: View {
             } else {
                 HStack(spacing: 0) {
                     Group { if planning.presentation == .timeline { timeline } else { board } }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
                     if let selected = planning.selectedItem {
-                        Divider(); inspector(selected).frame(width: 270)
+                        Divider()
+                        inspector(selected)
+                            .frame(minWidth: 240, idealWidth: 270, maxWidth: 300)
+                            .frame(maxHeight: .infinity)
+                            .clipped()
                     }
                 }
             }
             Divider()
-            HStack {
+            HStack(spacing: 10) {
                 if planning.isSaving { ProgressView().controlSize(.small) }
-                Text(planning.status).font(.caption)
-                Spacer()
-                Text("\(planning.document.items.count) items · \(planning.document.dependencies.count) dependencies").font(.caption).foregroundStyle(.secondary)
+                Text(planning.status).font(.caption).lineLimit(1).truncationMode(.tail)
+                Spacer(minLength: 8)
+                Text("\(planning.document.items.count) items · \(planning.document.dependencies.count) dependencies")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
             }.padding(.horizontal, 16).padding(.vertical, 8)
         }
+        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         .sheet(item: $planning.editRequest) { request in TaskEditorView(session: session, planning: planning, request: request) }
         .onChange(of: planning.selectedIDs) { _, _ in prerequisite = nil }
     }
@@ -92,7 +108,8 @@ struct RoadmapView: View {
                                 if let item = planning.document.items.first(where: { $0.id == row.id }) {
                                     HStack(spacing: 0) {
                                         Button { planning.select(item.id) } label: {
-                                            HStack { Image(systemName: planning.selectedIDs.contains(item.id) ? "checkmark.circle.fill" : "circle"); Text(item.title).lineLimit(1); Spacer() }
+                                            HStack { Image(systemName: planning.selectedIDs.contains(item.id) ? "checkmark.circle.fill" : "circle"); Text(item.title).lineLimit(1); Spacer(minLength: 0) }
+                                                .contentShape(Rectangle())
                                         }.buttonStyle(.plain).frame(width: 210, alignment: .leading)
                                         ZStack(alignment: .leading) {
                                             HStack(spacing: 0) { ForEach(0..<planning.windowDays, id: \.self) { _ in Rectangle().fill(Color.white.opacity(0.04)).frame(width: 1); Color.clear.frame(width: 23) } }
@@ -105,7 +122,9 @@ struct RoadmapView: View {
                                                     Image(systemName: row.mark == .milestone ? "diamond.fill" : "circle.dotted")
                                                         .foregroundStyle(statusColor(item.status)).frame(width: 24, height: 24)
                                                 }
-                                            }.buttonStyle(.plain).offset(x: CGFloat(row.offsetDays * 24))
+                                            }
+                                            .contentShape(Rectangle())
+                                            .buttonStyle(.plain).offset(x: CGFloat(row.offsetDays * 24))
                                                 .help(scheduleLabel(item))
                                         }.frame(width: CGFloat(planning.windowDays * 24), height: 43)
                                     }
@@ -153,9 +172,17 @@ struct RoadmapView: View {
     private func card(_ item: RoadmapItem) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(alignment: .top) {
-                Button { planning.select(item.id, extending: true) } label: { Image(systemName: planning.selectedIDs.contains(item.id) ? "checkmark.square.fill" : "square") }
-                    .buttonStyle(.plain).accessibilityLabel("Select \(item.title) for bulk actions")
-                Button { planning.select(item.id) } label: { Text(item.title).font(.callout.weight(.semibold)).frame(maxWidth: .infinity, alignment: .leading) }.buttonStyle(.plain)
+                Button { planning.select(item.id, extending: true) } label: {
+                    Image(systemName: planning.selectedIDs.contains(item.id) ? "checkmark.square.fill" : "square")
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).accessibilityLabel("Select \(item.title) for bulk actions")
+                Button { planning.select(item.id) } label: {
+                    Text(item.title).font(.callout.weight(.semibold))
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain)
                 if item.kind == .milestone { Image(systemName: "diamond").font(.caption) }
             }
             Text(scheduleLabel(item)).font(.caption2).foregroundStyle(.secondary)

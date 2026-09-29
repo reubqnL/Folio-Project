@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 12: large-file/long-line benchmark harness (N02) \u2014 deterministic BenchmarkCorpora sized against MarkdownLimits plus FolioBenchmarkProbe measuring parse, per-keystroke incremental reparse, link scan and excerpt (median/p95/min, printed and never asserted); 9 new tests (421 total, new tests unrun here; recorded full run remains Increment 07's 333). Measurements themselves remain unrecorded until the probe runs on the release machine.",
-  "current_work": "Execution of the Increment 08-12 suites and the benchmark probe in a Swift-capable environment (scripts/test-core.sh, scripts/run-benchmarks.sh), then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage for the working slots and save barriers, and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
+  "last_completed": "Increment 13: workspace layout stabilisation after the owner's manual Mac UI smoke test (responsive-layout, editor-split and Notes/Roadmap/Connections navigation defects). Source only: no Swift toolchain and no macOS SDK are reachable from this workspace, so nothing is compiled or run and no point is credited.",
+  "current_work": "Run the layout-stabilisation source on the Mac: `bash scripts/test-core.sh` for the 16 new WorkspaceLayoutPolicy tests plus the existing suites, then `bash scripts/verify-on-mac.sh` to build, and re-run the owner's responsiveness checklist at wide, normal and smallest supported window sizes on the disposable FOLIO TEST project. Every UI checklist item is still unchecked until that run; live microphone/speech testing stays blocked until the UI is stable.",
   "history": [
     {
       "increment": "04",
@@ -98,6 +98,11 @@
       "increment": "12",
       "estimate": 46,
       "basis": "Native editing/reading area credited 10/15 for the benchmark harness that decision 26 requires as release-gate evidence (deterministic corpora + measured editor-critical paths, timings never asserted); no credit for measured performance itself \u2014 no measurements exist until the probe runs on the release machine. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "13",
+      "estimate": 46,
+      "basis": "No score change: the workspace layout stabilisation (window minimum enforced with .contentMinSize, user-controlled panes, width-triggered pane hiding removed, Split reflow) is unverified source written without a Swift toolchain, so it earns no credit. Verified here: an independent Python mirror of the two layout functions reproduced every arithmetic expectation of the 16 new FolioCore tests. Not verified: compilation, the tests themselves, and every SwiftUI behaviour the owner reported."
     }
   ]
 }

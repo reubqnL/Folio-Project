@@ -8,27 +8,37 @@ struct ConnectionsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // The title yields first and truncates on one line; the picker and
+            // buttons keep their size so a narrow column cannot wrap a label
+            // character by character or push a control out of the window.
             HStack(spacing: 12) {
                 Text("Connections, not clutter.").font(.title2.weight(.semibold))
-                Spacer()
+                    .lineLimit(1).truncationMode(.tail).layoutPriority(-1)
+                Spacer(minLength: 8)
                 Picker("Neighbourhood depth", selection: Binding(get: { graph.hops }, set: { graph.setHops($0) })) {
                     Text("1 hop").tag(1); Text("2 hops").tag(2)
-                }.pickerStyle(.segmented).frame(width: 145)
+                }.pickerStyle(.segmented).frame(width: 145).fixedSize()
                 Button { graph.showList.toggle() } label: { Label(graph.showList ? "Graph" : "List", systemImage: graph.showList ? "point.3.connected.trianglepath.dotted" : "list.bullet") }
+                    .fixedSize()
                 Button { graph.rebuild() } label: { Image(systemName: "arrow.clockwise") }.help("Rebuild saved-note connections")
                     .disabled(graph.isBuilding)
+                    .fixedSize()
             }.padding(18)
             Divider()
             HStack(spacing: 14) {
-                Label("Notes", systemImage: "circle.fill").foregroundStyle(.blue)
-                Label("Roadmap items", systemImage: "square.fill").foregroundStyle(FolioStyle.gold)
-                Text("Authored links, not AI guesses.").foregroundStyle(.secondary)
-                Spacer()
-                if graph.isBuilding { ProgressView().controlSize(.small); Text("\(graph.processed)/\(graph.total)") }
-                Text("\(graph.logical?.nodes.count ?? 0) entities").foregroundStyle(.secondary)
+                Label("Notes", systemImage: "circle.fill").foregroundStyle(.blue).fixedSize()
+                Label("Roadmap items", systemImage: "square.fill").foregroundStyle(FolioStyle.gold).fixedSize()
+                Text("Authored links, not AI guesses.").foregroundStyle(.secondary).lineLimit(1).layoutPriority(-1)
+                Spacer(minLength: 8)
+                if graph.isBuilding { ProgressView().controlSize(.small); Text("\(graph.processed)/\(graph.total)").fixedSize() }
+                Text("\(graph.logical?.nodes.count ?? 0) entities").foregroundStyle(.secondary).lineLimit(1).fixedSize()
             }.font(.caption).padding(.horizontal, 18).padding(.vertical, 10)
             if let failure = graph.failure {
-                HStack { Text(failure).font(.caption); Spacer(); Button("Use List") { graph.showList = true } }.padding(10).background(Color.orange.opacity(0.08))
+                HStack(spacing: 10) {
+                    Text(failure).font(.caption).lineLimit(3).layoutPriority(-1)
+                    Spacer(minLength: 8)
+                    Button("Use List") { graph.showList = true }.fixedSize()
+                }.padding(10).background(Color.orange.opacity(0.08))
             }
             HStack(spacing: 0) {
                 Group {
@@ -36,22 +46,32 @@ struct ConnectionsView: View {
                         ContentUnavailableView("Connect a note or roadmap item", systemImage: "point.3.connected.trianglepath.dotted", description: Text("Wikilinks and explicit task-note/dependency links appear here. Nothing is inferred or written into your notes."))
                     } else if graph.showList { connectionList }
                     else { spatialView }
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }.frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
                 Divider()
-                inspector.frame(width: 265)
+                inspector
+                    .frame(minWidth: 240, idealWidth: 265, maxWidth: 300)
+                    .frame(maxHeight: .infinity)
+                    .clipped()
             }
             Divider()
-            HStack {
+            HStack(spacing: 10) {
                 if let projection = graph.projection, projection.omittedNodes > 0 {
-                    Text("\(projection.omittedNodes) entities clustered · \(projection.omittedEdges) individual edges omitted").font(.caption)
-                } else { Text("Click to inspect · Open explicitly to navigate").font(.caption) }
-                Spacer()
+                    Text("\(projection.omittedNodes) entities clustered · \(projection.omittedEdges) individual edges omitted")
+                        .font(.caption).lineLimit(1).truncationMode(.tail).layoutPriority(-1)
+                } else {
+                    Text("Click to inspect · Open explicitly to navigate")
+                        .font(.caption).lineLimit(1).layoutPriority(-1)
+                }
+                Spacer(minLength: 8)
                 if let catalogue = graph.catalogue, catalogue.unresolvedLinks > 0 || catalogue.omittedNoteBodies > 0 {
-                    Text("\(catalogue.unresolvedLinks) unresolved links · \(catalogue.omittedNoteBodies) bodies omitted").font(.caption).foregroundStyle(.secondary)
+                    Text("\(catalogue.unresolvedLinks) unresolved links · \(catalogue.omittedNoteBodies) bodies omitted")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
                         .help("Ambiguous/missing targets are not guessed. Oversized/unreadable note bodies and scan-budget overflow are explicitly omitted; roadmap links remain available.")
                 }
             }.padding(.horizontal, 16).padding(.vertical, 8)
         }
+        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { if isActive { graph.buildIfNeeded() } }
         .onChange(of: isActive) { _, active in if active { graph.buildIfNeeded() } }
         .onReceive(NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)) { _ in if isActive { graph.adaptBudget() } }
@@ -59,14 +79,33 @@ struct ConnectionsView: View {
 
     private var spatialView: some View {
         VStack(spacing: 0) {
-            HStack {
-                Toggle("3D exploration", isOn: Binding(get: { graph.camera.threeDimensional }, set: { graph.camera.threeDimensional = $0 })).toggleStyle(.switch)
-                Button("Reset View") { graph.resetCamera() }
-                Button("Collapse Groups") { graph.resetClusters() }.disabled(graph.expanded.isEmpty)
-                Spacer()
-                Button("−") { graph.camera.zoom /= 1.15; graph.camera.sanitise() }
-                Text("\(Int(graph.camera.zoom * 100))%").font(.caption.monospacedDigit())
-                Button("+") { graph.camera.zoom *= 1.15; graph.camera.sanitise() }
+            // Icon buttons with tooltips rather than four text buttons: the row
+            // has to survive a normal window without wrapping or clipping.
+            HStack(spacing: 10) {
+                Toggle("3D exploration", isOn: Binding(get: { graph.camera.threeDimensional }, set: { graph.camera.threeDimensional = $0 }))
+                    .toggleStyle(.switch)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .help("Optional 3D view. The 2D graph stays the default.")
+                Button { graph.resetCamera() } label: { Image(systemName: "arrow.counterclockwise") }
+                    .help("Reset the graph view")
+                    .accessibilityLabel("Reset view")
+                    .fixedSize()
+                Button { graph.resetClusters() } label: { Image(systemName: "square.grid.3x3") }
+                    .help("Collapse expanded groups")
+                    .accessibilityLabel("Collapse groups")
+                    .disabled(graph.expanded.isEmpty)
+                    .fixedSize()
+                Spacer(minLength: 8)
+                Button { graph.camera.zoom /= 1.15; graph.camera.sanitise() } label: { Image(systemName: "minus.magnifyingglass") }
+                    .help("Zoom out")
+                    .accessibilityLabel("Zoom out")
+                    .fixedSize()
+                Text("\(Int(graph.camera.zoom * 100))%").font(.caption.monospacedDigit()).lineLimit(1).fixedSize()
+                Button { graph.camera.zoom *= 1.15; graph.camera.sanitise() } label: { Image(systemName: "plus.magnifyingglass") }
+                    .help("Zoom in")
+                    .accessibilityLabel("Zoom in")
+                    .fixedSize()
             }.controlSize(.small).padding(12)
             GeometryReader { geometry in
                 ZStack {
@@ -142,8 +181,8 @@ struct ConnectionsView: View {
                         }
                     }
                 } else { Text("Select an entity to inspect its relationships. The editor will not change until you choose Open.").font(.callout).foregroundStyle(.secondary) }
-                if let notice = graph.notice { Text(notice).font(.caption).foregroundStyle(.orange) }
-            }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                if let notice = graph.notice { Text(notice).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
+            }.padding(20).frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         }.background(FolioStyle.sidebar)
     }
     private func relationLabel(_ edge: GraphEdge, selected: GraphEntityID) -> String {

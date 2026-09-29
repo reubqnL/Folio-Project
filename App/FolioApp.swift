@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import FolioCore
 
 @main
 @MainActor
@@ -11,11 +12,22 @@ struct FolioApp: App {
     var body: some Scene {
         Window("Folio", id: "main") {
             RootView(session: session)
-                .frame(minWidth: 960, minHeight: 640)
+                .frame(
+                    minWidth: WorkspaceLayoutPolicy.minimumWindowWidth,
+                    minHeight: WorkspaceLayoutPolicy.minimumWindowHeight
+                )
                 .preferredColorScheme(.dark)
                 .onAppear { appDelegate.session = session }
         }
-        .defaultSize(width: 1320, height: 820)
+        .defaultSize(
+            width: WorkspaceLayoutPolicy.defaultWindowWidth,
+            height: WorkspaceLayoutPolicy.defaultWindowHeight
+        )
+        // Without this the window can be dragged narrower than the content
+        // minimum. AppKit then clips the content view, which is how toolbar and
+        // pane controls ended up outside the window where they could not be
+        // seen or clicked. `contentMinSize` refuses the resize instead.
+        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
                 MappedCommandButton(session: session, command: .openProject)
@@ -43,6 +55,30 @@ struct FolioApp: App {
                 MappedCommandButton(session: session, command: .rebuildSearch)
                 Divider()
                 MappedCommandButton(session: session, command: .showLauncher)
+            }
+            // Deliberately not called "View": macOS already supplies a View
+            // menu, and a second one with the same title is worse than a clear name.
+            CommandMenu("Workspace") {
+                // The workspace panes are hidden only when asked for here or in
+                // the toolbar. Nothing disappears because a window was resized.
+                // Deliberately no hard-coded shortcut: `ShortcutPolicy` owns the
+                // chord table, and ⌥⌘1/⌥⌘2/⌥⌘3 already mean Source/Preview/Split.
+                // A menu item here can never shadow a remapped command.
+                Button(session.showsExplorer ? "Hide Project Sidebar" : "Show Project Sidebar") {
+                    session.showsExplorer.toggle()
+                }
+                .disabled(session.destination != .notes)
+                Button(session.showsAssistant ? "Hide Capture Panel" : "Show Capture Panel") {
+                    session.showsAssistant.toggle()
+                }
+                .disabled(session.destination != .notes)
+                Divider()
+                Button(session.showsExplorer && session.showsAssistant ? "Hide Both Panels" : "Show Both Panels") {
+                    let show = !(session.showsExplorer && session.showsAssistant)
+                    session.showsExplorer = show
+                    session.showsAssistant = show
+                }
+                .disabled(session.destination != .notes)
             }
             CommandMenu("Editor") {
                 MappedCommandButton(session: session, command: .showSource)

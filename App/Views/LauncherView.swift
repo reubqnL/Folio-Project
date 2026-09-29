@@ -16,10 +16,15 @@ struct LauncherView: View {
                 Text("A PLACE FOR WHAT COMES NEXT")
                     .font(.system(size: 10, weight: .semibold)).tracking(2)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 Text("Good ideas deserve a place.")
                     .font(.system(size: 34, weight: .semibold))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
                 Text("Write freely. Connect the dots. Make a plan.")
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 18) {
                 moduleCard(
@@ -68,10 +73,14 @@ struct LauncherView: View {
                 }
                 .foregroundStyle(enabled ? FolioStyle.gold : .secondary)
                 Text(title).font(.system(size: 23, weight: .semibold))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(subtitle).font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(24)
-            .frame(maxWidth: .infinity, minHeight: 170, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 170, alignment: .leading)
             .background(enabled ? FolioStyle.gold.opacity(0.045) : Color.white.opacity(0.02))
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(enabled ? FolioStyle.gold.opacity(contrast == .increased ? 1 : 0.5) : .white.opacity(contrast == .increased ? 0.5 : 0.1)))

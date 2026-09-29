@@ -1,5 +1,9 @@
 import Foundation
-import AVFoundation
+// `AVAudioPCMBuffer.floatChannelData` and the converter callbacks are not
+// annotated `Sendable`; under Swift 6 strict concurrency the pre-concurrency
+// import keeps this audio pipeline compiling without weakening the checks on
+// Folio's own types.
+@preconcurrency import AVFoundation
 import Speech
 import CoreMedia
 import FolioCore
@@ -105,7 +109,9 @@ actor AppleSpeechPipeline {
                     raw.withUnsafeBufferPointer { source in
                         guard let address = source.baseAddress else { return }
                         for channel in 0..<queue.channels {
-                            memcpy(planes[channel], address.advanced(by: channel * count), count * MemoryLayout<Float>.size)
+                            // Typed copy instead of `memcpy`: Swift 6 rejects the
+                            // raw-pointer form without a manual rebound.
+                            planes[channel].update(from: address.advanced(by: channel * count), count: count)
                         }
                     }
                     try offer(try convert(buffer))

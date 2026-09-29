@@ -9,14 +9,22 @@ final class WorkspaceSession {
     enum Destination: Equatable { case launcher, notes, encrypted }
     enum WorkspaceSection: String, CaseIterable { case notes, roadmap, connections }
     var workspaceSection: WorkspaceSection = .notes
+    /// These panes are shown or hidden because the user asked, never because a
+    /// window crossed a width threshold. `WorkspaceLayoutPolicy` only ever
+    /// narrows them toward a minimum, so section switching and resizing cannot
+    /// move the writing surface out from under the pointer.
+    var showsExplorer = true
+    var showsAssistant = true
     let encrypted = EncryptedProjectController()
     let planning = RoadmapController()
     let connections = GraphController()
     let experience = ExperiencePolicy()
     let editorPolicy = EditorNavigationPolicy()
     let aiPolicy = AIInteractionPolicy()
-    let speech = SpeechController()
-    let capture = CaptureController()
+    // `var`, not `let`: SwiftUI needs a writable key path to build the
+    // `$session.speech…` / `$session.capture…` sheet bindings.
+    var speech = SpeechController()
+    var capture = CaptureController()
     let search = NoteSearchController()
     let shortcuts = ShortcutPreferences()
     var showingSearch = false

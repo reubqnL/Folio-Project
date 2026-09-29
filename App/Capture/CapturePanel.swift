@@ -59,12 +59,16 @@ struct CapturePanel: View {
                         .font(.caption2).foregroundStyle(.secondary)
                     ForEach(capture.context) { fragment in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack {
+                            HStack(spacing: 8) {
                                 Label(fragment.title, systemImage: "doc.text").font(.caption.weight(.medium))
-                                Spacer()
-                                Button { capture.removeContext(fragment.id) } label: { Image(systemName: "minus.circle") }
-                                    .buttonStyle(.plain).disabled(capture.isGenerating || capture.isApplying || session.speech.blocksCaptureChanges)
-                                    .accessibilityLabel("Remove \(fragment.title) from context")
+                                    .lineLimit(2)
+                                Spacer(minLength: 4)
+                                Button { capture.removeContext(fragment.id) } label: {
+                                    Image(systemName: "minus.circle").contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain).disabled(capture.isGenerating || capture.isApplying || session.speech.blocksCaptureChanges)
+                                .accessibilityLabel("Remove \(fragment.title) from context")
+                                .fixedSize()
                             }
                             Text(fragment.range == nil ? "Whole note snapshot" : "Selected excerpt only").font(.caption2).foregroundStyle(FolioStyle.gold)
                             DisclosureGroup("Inspect exact text") {
