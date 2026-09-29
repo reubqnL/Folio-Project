@@ -21,9 +21,11 @@ struct RoadmapView: View {
                 }.pickerStyle(.segmented).labelsHidden().frame(width: 200).fixedSize()
                 Spacer(minLength: 8)
                 Button { Task { await planning.undo() } } label: { Image(systemName: "arrow.uturn.backward") }.help("Undo roadmap change")
+                    .accessibilityLabel("Undo roadmap change")
                     .disabled(!planning.history.canUndo || planning.hasUnwrittenChanges)
                     .fixedSize()
                 Button { Task { await planning.redo() } } label: { Image(systemName: "arrow.uturn.forward") }.help("Redo roadmap change")
+                    .accessibilityLabel("Redo roadmap change")
                     .disabled(!planning.history.canRedo || planning.hasUnwrittenChanges)
                     .fixedSize()
                 Button("New Item…") { planning.beginNew() }.buttonStyle(.borderedProminent).disabled(planning.snapshot == nil || planning.isSaving)
@@ -84,10 +86,14 @@ struct RoadmapView: View {
         VStack(spacing: 0) {
             HStack {
                 Button { planning.shiftWindow(-14) } label: { Image(systemName: "chevron.left") }
+                    .help("Show earlier dates")
+                    .accessibilityLabel("Show earlier dates")
                 Text(planning.windowStart.description).font(.callout.monospacedDigit())
                     .lineLimit(1)
                     .fixedSize()
                 Button { planning.shiftWindow(14) } label: { Image(systemName: "chevron.right") }
+                    .help("Show later dates")
+                    .accessibilityLabel("Show later dates")
                 Button("Today") { planning.windowStart = .today() }
                 Spacer()
                 Picker("Window", selection: $planning.windowDays) { Text("6 weeks").tag(42); Text("12 weeks").tag(84); Text("Year").tag(365) }
@@ -199,6 +205,7 @@ struct RoadmapView: View {
                     Button("Move Down") { Task { await planning.moveItem(item.id, direction: 1) } }
                 }.controlSize(.mini)
                 Button { planning.beginEdit(item.id) } label: { Image(systemName: "pencil") }.buttonStyle(.plain).help("Edit item")
+                    .accessibilityLabel("Edit \(item.title)")
             }
         }.padding(11).background(planning.selectedIDs.contains(item.id) ? FolioStyle.gold.opacity(0.12) : FolioStyle.editor)
             .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -228,6 +235,7 @@ struct RoadmapView: View {
                         Text(planning.document.items.first { $0.id == dependency.predecessor }?.title ?? "Missing item").font(.callout)
                         Spacer()
                         Button { Task { _ = await planning.submit(.removeDependency(dependency.id)) } } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).help("Remove prerequisite")
+                            .accessibilityLabel("Remove prerequisite \(planning.document.items.first { $0.id == dependency.predecessor }?.title ?? "missing item")")
                     }
                 }
                 Picker("Add prerequisite", selection: $prerequisite) {

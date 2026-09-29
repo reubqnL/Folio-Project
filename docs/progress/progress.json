@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Owner confirmed on a rebuild at 9f5096f: 'seems to be working just fine. nav works, those vertical text things are hidden.' The two defects Increment 13 set out to fix -- controls disappearing on resize, and character-by-character vertical text -- are both absent in a running app, and section navigation works from both the toolbar and the sidebar. The layout work is no longer unverified source: it has been built, launched and checked by hand.",
-  "current_work": "Finish the pre-UI checklist rather than starting new features, since the owner has now confirmed the UI is usable. Three things are unexercised because they changed after the last rebuild: the capture panel's phantom cancellation message, File > Open Recent, and the relabelled Jump to Cursor control. Then re-walk the regression set that Increment 13 could have broken (create, edit, save, reopen, search) and, with the UI stable, move to the live microphone and speech testing that has been deliberately held back.",
+  "last_completed": "Owner confirmed all three outstanding changes work on a rebuild: the capture panel no longer reports a phantom cancellation, File > Open Recent reopens the project, and Jump to Cursor behaves as a one-shot action. Owner's summary: 'I think it works perfectly fine for the moment.' Then, on the owner's direction to improve what exists before adding anything, a polish pass found and fixed three defects: the toolbar note picker and the sidebar shared one filter string so filtering in one silently filtered the other; six icon-only buttons in RoadmapView had no accessibility label while ConnectionsView pairs help with label on every one; and Recovery was enabled with no project open. All unverified source.",
+  "current_work": "Encrypted .rdm is the owner's stated next priority. Before new work: the owner answers the explanation questions on what .rdm is and how live speech works, and the remaining original-report checklist items are walked (Split in a normal window, clicking controls after resizing to the floor, and the create/edit/save/reopen/search regression set). Live microphone and speech testing is no longer blocked -- its gate was 'not until the UI is stable', which the owner has now confirmed.",
   "history": [
     {
       "increment": "04",
@@ -128,6 +128,11 @@
       "increment": "13f",
       "estimate": 47,
       "basis": "Native editing/reading credited one further point (11/15): the layout stabilisation is no longer unverified source. It has been compiled, launched and confirmed by the owner to fix both reported defects in a running app, which is the runtime evidence this area was held back for. Credit stops short of the full weight because the checklist items changed after that build remain unexercised, and no accessibility, IME or large-vault behaviour has been tested."
+    },
+    {
+      "increment": "13g",
+      "estimate": 47,
+      "basis": "No score change. The three fixes are defects in already-credited areas rather than new capability, and they are unverified source. The credit for the layout work stands on the owner's runtime confirmation recorded in 13f."
     }
   ]
 }

@@ -98,6 +98,18 @@ All six now carry `.labelsHidden()`, which removes the label from layout while k
 
 **What it does not close:** the checklist's remaining items are unchecked. The capture panel's phantom cancellation and File → Open Recent were changed in the same unrebuilt commits and have not yet been exercised, and Source/Preview/Split in a normal window, resize-to-floor control hit-testing, and the note-editing regression set (create, edit, save, reopen, search) have not been re-walked since `188314e`.
 
+**Later the same day, all three were confirmed working** on the next rebuild: the capture panel no longer reports a phantom cancellation, `File → Open Recent` reopens the project, and the relabelled **Jump to Cursor** control behaves as a one-shot action. The owner's summary of the whole screen was *"I think it works perfectly fine for the moment."* That leaves the regression set (create, edit, save, reopen, search) and the resize-to-floor hit-testing walk as the only unchecked items from the original report.
+
+## Polish pass on the existing screens (2026-09-29)
+
+Owner's direction: improve what is already there before adding anything, and prioritise the encrypted `.rdm` work next. Three defects were found by reading the Notes, Roadmap and Connections sources:
+
+1. **The toolbar's note picker and the left sidebar shared one filter string.** Both `TextField`s were labelled "Filter filenames" and both bound to a single `@State private var filter`, so typing in the toolbar popover silently narrowed the sidebar list too, and closing the popover left the project list filtered by text that was no longer visible anywhere. The picker now owns `pickerFilter`, filters through its own `pickerNotes`, states when nothing matches, and clears itself on dismiss.
+2. **Six icon-only buttons in `RoadmapView` had no accessibility label** — undo, redo, both timeline date arrows, the card's edit pencil, and the prerequisite remove button. They had `.help()` tooltips, which is not the same thing. `ConnectionsView` already paired `.help()` with `.accessibilityLabel()` on every icon button, so this was a gap against the project's own standard; all six now match.
+3. **"Recovery…" in the toolbar's More menu was enabled with no project open**, where it silently did nothing because `recoverProject()` returns early without a store. Every neighbouring item was already disabled in that state; it now is too.
+
+**Not verified:** unverified source. Nothing in this pass has been compiled or run.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.

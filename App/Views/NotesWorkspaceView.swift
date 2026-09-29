@@ -16,10 +16,19 @@ import FolioCore
 struct NotesWorkspaceView: View {
     @Bindable var session: WorkspaceSession
     @State private var filter = ""
+    /// The note picker's own filter. It deliberately does not share `filter`:
+    /// both fields are labelled "Filter filenames", and one `@State` string
+    /// meant typing in the toolbar popover silently narrowed the sidebar list
+    /// too, so closing the popover left the project list filtered by text the
+    /// user could no longer see.
+    @State private var pickerFilter = ""
     @State private var showingNotePicker = false
 
     private var filteredNotes: [VaultNote] {
         filter.isEmpty ? session.notes : session.notes.filter { $0.relativePath.localizedStandardContains(filter) }
+    }
+    private var pickerNotes: [VaultNote] {
+        pickerFilter.isEmpty ? session.notes : session.notes.filter { $0.relativePath.localizedStandardContains(pickerFilter) }
     }
 
     /// The capture panel belongs to the Notes section only, so its column is
@@ -385,18 +394,25 @@ struct NotesWorkspaceView: View {
         .popover(isPresented: $showingNotePicker) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Project notes").font(.headline)
-                TextField("Filter filenames", text: $filter).textFieldStyle(.roundedBorder)
-                List(filteredNotes) { note in
-                    Button(note.relativePath) {
-                        showingNotePicker = false
-                        Task { await session.selectNote(note.id) }
+                TextField("Filter filenames", text: $pickerFilter).textFieldStyle(.roundedBorder)
+                if pickerNotes.isEmpty {
+                    Text(session.notes.isEmpty ? "This project has no Markdown notes yet." : "No filenames match “\(pickerFilter)”.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                } else {
+                    List(pickerNotes) { note in
+                        Button(note.relativePath) {
+                            showingNotePicker = false
+                            Task { await session.selectNote(note.id) }
+                        }
+                        .buttonStyle(.plain)
+                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .contentShape(Rectangle())
                 }
             }
             .padding(16)
             .frame(width: 430, height: 420)
+            .onDisappear { pickerFilter = "" }
         }
     }
 
@@ -425,6 +441,7 @@ struct NotesWorkspaceView: View {
             Button("Refresh Project") { Task { await session.refreshProject() } }
                 .disabled(session.project == nil || session.isRefreshing)
             Button("Recovery…") { Task { await session.recoverProject() } }
+                .disabled(session.project == nil)
             Button("Repair Links…") { session.runCommand(.repairLinks) }
                 .disabled(session.project == nil)
         } label: {
