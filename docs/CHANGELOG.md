@@ -1,3 +1,14 @@
+# Fix — macOS compile: vendored libarchive headers (2026-09-29)
+
+## Fixed
+
+- First Mac build attempt (Swift 6.3.2, macOS 26, Xcode 26) failed compiling `Sources/FolioRDMPrimitives/FolioArchive.c` with `'archive.h' file not found`: macOS ships the compiled system libarchive (the SDK exposes `libarchive.tbd`) but not its headers. Folio now compiles against a vendored, declaration-subset mirror of the libarchive 3.7.7 public headers (`Sources/FolioRDMPrimitives/vendor/libarchive/`, BSD-2-Clause; provenance and extension rules in its README) and links the system `libarchive` — no Homebrew or other installs needed on the Mac. Linux builds use the same headers and need the distro `libarchive` development package.
+- The subset is private to `FolioRDMPrimitives` (`cSettings: .headerSearchPath("vendor/libarchive")`); every constant and prototype Folio uses is verbatim upstream, and `FolioArchive.c` compiles clean under `gcc -Wall -Wextra -Werror` against it.
+
+## Notes
+
+- App Store release note: App Review flags system-libarchive symbol references as non-public API. If Folio ever ships on the Mac App Store, switch to a statically built libarchive. Tracked as a release-track item (vendor README).
+
 # Increment 12 — large-file/long-line benchmark harness (N02)
 
 ## Added

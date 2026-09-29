@@ -62,7 +62,7 @@ On the supported core-test host:
 bash ../scripts/test-core.sh
 ```
 
-Linux needs Swift 6, Clang with sanitizer runtimes, OpenSSL/SQLite development libraries and Python 3. The optional setup script restores the tested Linux toolchain into a cache. All probes generate fresh fixtures; never run crash helpers against real work.
+Linux needs Swift 6, Clang with sanitizer runtimes, OpenSSL/SQLite/libarchive development libraries and Python 3. The optional setup script restores the tested Linux toolchain into a cache. macOS needs no extra archive package: Folio compiles against a vendored declaration-subset of the libarchive 3.7.7 public headers (`Sources/FolioRDMPrimitives/vendor/libarchive/`, see its README for provenance and rules) and links the system libarchive that macOS already ships. All probes generate fresh fixtures; never run crash helpers against real work.
 
 ## Internal Mac speech gates
 

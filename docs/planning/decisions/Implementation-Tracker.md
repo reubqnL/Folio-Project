@@ -15,6 +15,7 @@ All 50 decisions remain authoritative. Every user-facing progress update include
 
 ## Current evidence and limits
 
+- First Mac build attempt (Swift 6.3.2 / macOS 26 / Xcode 26) reached compilation and failed only on missing libarchive headers (macOS ships the compiled system library without headers). Fixed by vendoring a declaration-verbatim subset of the libarchive 3.7.7 public headers (`Sources/FolioRDMPrimitives/vendor/libarchive/`, BSD-2-Clause) and linking the system library. Release-track note: Mac App Store distribution would require a statically linked libarchive instead (App Review flags system-libarchive references); direct distribution is unaffected.
 - **The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures.** This increment's sources and tests pass full swift-syntax parsing (118 Swift files, 0 syntax failures).
 - The Increment 10 reparse algorithm additionally survived 32,000 randomized edit-sequence equivalence checks via an out-of-repository Python mirror of the same algorithm — design evidence only; the harness is not shipped and does not replace the Swift run.
 - This development environment cannot install a Swift toolchain (network policy), so the new tests have not been executed here. They must pass `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence; unrun evidence is blocking, not a pass.

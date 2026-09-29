@@ -25,6 +25,7 @@ Subjective weighted planning estimate; not verified security/correctness, percen
 
 ## Evidence status
 
+- First Mac build attempt (Swift 6.3.2 / macOS 26 / Xcode 26) reached compilation and failed only on missing libarchive headers (macOS ships the compiled system library without headers). Fixed by vendoring a declaration-verbatim subset of the libarchive 3.7.7 headers (`Sources/FolioRDMPrimitives/vendor/libarchive/`) and linking the system library — zero extra installs on the Mac. No tests have executed on that host yet; `bash scripts/test-core.sh` is the next step there.
 - The full Debug/Release core run recorded at Increment 07 remains the last complete execution evidence (333 tests, 0 failures).
 - This increment's source and tests pass full swift-syntax parsing (118 Swift files, 0 syntax failures); the 9 new tests (421 total in source) must run with `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence. Unrun checks are blocking, not a pass.
 - The Increment 10 reparse algorithm additionally has 32,000 randomized edit-sequence equivalence checks (incremental vs full parse) from a development-time Python mirror of the same algorithm — strong design evidence, not a substitute for the Swift test run, and the harness is not shipped in the repository.
