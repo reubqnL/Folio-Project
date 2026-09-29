@@ -25,16 +25,27 @@ struct NoteSearchView: View {
                 if search.isIndexing { Button("Pause") { search.cancelIndexing() }.controlSize(.small) }
             }
             if let error = search.failure { Text(error).font(.caption).foregroundStyle(.orange) }
-            List(selection: $selected) {
-                ForEach(search.results) { hit in
-                    Button { open(hit.id) } label: {
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack { Text(hit.title).font(.headline); Spacer(); Text(hit.modifiedAt, style: .date).font(.caption).foregroundStyle(.secondary) }
-                            Text(hit.path).font(.caption).foregroundStyle(FolioStyle.gold)
-                            if !hit.tags.isEmpty { Text(hit.tags.map { "#" + $0 }.joined(separator: "  ")).font(.caption).foregroundStyle(.secondary) }
-                            Text(hit.excerpt).font(.callout).foregroundStyle(.secondary).lineLimit(3)
-                        }.padding(.vertical, 6)
-                    }.buttonStyle(.plain).tag(hit.id)
+            // `message` only reports index state, so an empty result list used
+            // to read as "Local search ready" with nothing under it and no
+            // indication that the query simply matched nothing.
+            if search.results.isEmpty, !search.query.isEmpty, !search.isSearching, search.failure == nil {
+                ContentUnavailableView {
+                    Label("No saved notes match", systemImage: "magnifyingglass")
+                } description: {
+                    Text("Nothing in \(search.scope.title.lowercased()) contains \u{201C}\(search.query)\u{201D}. Matching is literal, so a quoted phrase must appear exactly. Unsaved writing is not searched.")
+                }
+            } else {
+                List(selection: $selected) {
+                    ForEach(search.results) { hit in
+                        Button { open(hit.id) } label: {
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack { Text(hit.title).font(.headline); Spacer(); Text(hit.modifiedAt, style: .date).font(.caption).foregroundStyle(.secondary) }
+                                Text(hit.path).font(.caption).foregroundStyle(FolioStyle.gold)
+                                if !hit.tags.isEmpty { Text(hit.tags.map { "#" + $0 }.joined(separator: "  ")).font(.caption).foregroundStyle(.secondary) }
+                                Text(hit.excerpt).font(.callout).foregroundStyle(.secondary).lineLimit(3)
+                            }.padding(.vertical, 6)
+                        }.buttonStyle(.plain).tag(hit.id)
+                    }
                 }
             }
             HStack {

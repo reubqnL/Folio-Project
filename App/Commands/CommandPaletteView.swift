@@ -15,20 +15,28 @@ struct CommandPaletteView: View {
             TextField("Find a Folio command…", text: $query)
                 .textFieldStyle(.roundedBorder).focused($focused)
                 .onSubmit { execute(selected ?? matches.first) }
-            List(selection: $selected) {
-                ForEach(matches) { command in
-                    let disabled = session.commandContext.disabledReason(for: command)
-                    Button { execute(command) } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(command.title)
-                                if let disabled { Text(disabled).font(.caption).foregroundStyle(.secondary) }
-                            }
-                            Spacer()
-                            Text(session.shortcuts.shortcut(for: command).label).font(.caption.monospaced()).foregroundStyle(.secondary)
-                        }.padding(.vertical, 4)
+            if matches.isEmpty {
+                ContentUnavailableView {
+                    Label("No command matches", systemImage: "command")
+                } description: {
+                    Text("Nothing matches \u{201C}\(query)\u{201D}. The palette searches command names and their keywords, not note content — use Search Notes for that.")
+                }
+            } else {
+                List(selection: $selected) {
+                    ForEach(matches) { command in
+                        let disabled = session.commandContext.disabledReason(for: command)
+                        Button { execute(command) } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(command.title)
+                                    if let disabled { Text(disabled).font(.caption).foregroundStyle(.secondary) }
+                                }
+                                Spacer()
+                                Text(session.shortcuts.shortcut(for: command).label).font(.caption.monospaced()).foregroundStyle(.secondary)
+                            }.padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain).disabled(disabled != nil).tag(command)
                     }
-                    .buttonStyle(.plain).disabled(disabled != nil).tag(command)
                 }
             }
             HStack { Text("Shortcuts can be changed in Folio Settings.").font(.caption).foregroundStyle(.secondary); Spacer(); Button("Close") { dismiss() }.keyboardShortcut(.cancelAction) }

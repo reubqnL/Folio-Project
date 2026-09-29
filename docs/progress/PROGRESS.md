@@ -110,6 +110,19 @@ Owner's direction: improve what is already there before adding anything, and pri
 
 **Not verified:** unverified source. Nothing in this pass has been compiled or run.
 
+### Second polish pass: screens that answered a question with silence (2026-09-29)
+
+The first pass fixed one shared-state bug and some missing labels. Reading the rest of the surfaces for the same class of defect — a control that accepts input and then says nothing about what happened to it — turned up six more:
+
+1. **`GraphController.configure` never reset `listFilter`.** The Connections list filter survived a project switch, so opening a second project after filtering in the first left the list silently narrowed by a term with no visible cause. It now resets with the rest of the per-project state.
+2. **The Connections list had no empty state.** A filter matching nothing and a project with no links at all rendered identically: an empty list. It now distinguishes them, states the count it is filtering from, and offers a Clear Filter button.
+3. **A failed timeline projection rendered nothing.** `if let projection = try? TimelineProjection(…)` had no `else`, so any window that could not be projected produced a blank timeline area. It now explains the state and offers a one-click reset to Today with a 6-week window; the code path is reachable when the window has been scrolled far enough for the calendar arithmetic to fail.
+4. **Search reported no result count.** `NoteSearchController.message` describes index state only, so a query matching nothing showed an empty list under "Local search ready". The search sheet now says which scope was searched and that matching is literal.
+5. **The command palette had no empty state**, so a query matching no command produced a blank list under the title.
+6. **The sidebar and the kanban board both filtered silently.** The sidebar showed nothing when a filter matched no filename; the board's column headers counted every item in a status while the columns displayed only filtered ones, so a filter made the header contradict the column. The sidebar now names the unmatched term with a Clear button; the board counts "shown of total" and offers Clear when nothing matches anywhere.
+
+**Not verified:** unverified source, like the pass above.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.

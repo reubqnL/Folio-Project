@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Owner confirmed all three outstanding changes work on a rebuild: the capture panel no longer reports a phantom cancellation, File > Open Recent reopens the project, and Jump to Cursor behaves as a one-shot action. Owner's summary: 'I think it works perfectly fine for the moment.' Then, on the owner's direction to improve what exists before adding anything, a polish pass found and fixed three defects: the toolbar note picker and the sidebar shared one filter string so filtering in one silently filtered the other; six icon-only buttons in RoadmapView had no accessibility label while ConnectionsView pairs help with label on every one; and Recovery was enabled with no project open. All unverified source.",
-  "current_work": "Encrypted .rdm is the owner's stated next priority. Before new work: the owner answers the explanation questions on what .rdm is and how live speech works, and the remaining original-report checklist items are walked (Split in a normal window, clicking controls after resizing to the floor, and the create/edit/save/reopen/search regression set). Live microphone and speech testing is no longer blocked -- its gate was 'not until the UI is stable', which the owner has now confirmed.",
+  "last_completed": "Second polish pass on the existing screens, targeting one class of defect: a control that accepts input and then says nothing about what happened to it. Six fixed. GraphController.configure never reset listFilter, so the Connections filter survived a project switch and silently narrowed the next project's list. The Connections list, the note search sheet, the command palette, the sidebar note list and the kanban board all rendered an unexplained empty state; a failed timeline projection rendered nothing at all because `if let projection = try?` had no else branch; and the board's column headers counted unfiltered items while the columns showed filtered ones. All are unverified source.",
+  "current_work": "Encrypted .rdm remains the owner's stated next priority after the polish work. Outstanding: the owner rebuilds and confirms the twice-polished screens, and the original report's remaining checklist items are walked (Split in a normal window, clicking controls after resizing to the floor, and the create/edit/save/reopen/search regression set). Live microphone and speech testing is unblocked -- its gate was 'not until the UI is stable'.",
   "history": [
     {
       "increment": "04",
@@ -133,6 +133,11 @@
       "increment": "13g",
       "estimate": 47,
       "basis": "No score change. The three fixes are defects in already-credited areas rather than new capability, and they are unverified source. The credit for the layout work stands on the owner's runtime confirmation recorded in 13f."
+    },
+    {
+      "increment": "13h",
+      "estimate": 47,
+      "basis": "No score change. These are defects in already-credited areas rather than new capability, and they are unverified source. The layout credit stands on the owner's runtime confirmation recorded in 13f."
     }
   ]
 }

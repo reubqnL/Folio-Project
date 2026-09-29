@@ -147,6 +147,17 @@ struct RoadmapView: View {
                             }
                         }.padding(12)
                     }
+                } else {
+                    // `try?` used to render nothing at all here, so a window
+                    // that could not be projected produced a silently empty
+                    // timeline with no way to tell that anything was wrong.
+                    ContentUnavailableView {
+                        Label("Timeline unavailable", systemImage: "calendar.badge.exclamationmark")
+                    } description: {
+                        Text("This date window cannot be shown. Press Today with a 6-week window to restore it. No dates in your roadmap have been changed.")
+                    } actions: {
+                        Button("Show Today") { planning.windowStart = .today(); planning.windowDays = 42 }
+                    }
                 }
                 Divider()
                 VStack(alignment: .leading, spacing: 10) {
@@ -158,17 +169,44 @@ struct RoadmapView: View {
         }
     }
 
+    /// The items a board column actually displays. The column header used to
+    /// count every item in that status while the body showed only the filtered
+    /// ones, so a filter made the count contradict what was on screen.
+    private func boardItems(_ status: RoadmapStatus) -> [RoadmapItem] {
+        let all = planning.document.items(in: status)
+        guard !filter.isEmpty else { return all }
+        return all.filter { ($0.title + " " + $0.detail).localizedStandardContains(filter) }
+    }
+    private func boardCountLabel(_ status: RoadmapStatus) -> String {
+        let total = planning.document.items(in: status).count
+        let shown = boardItems(status).count
+        return filter.isEmpty ? "\(total)" : "\(shown) of \(total)"
+    }
     private var board: some View {
         VStack(spacing: 10) {
             TextField("Filter roadmap items", text: $filter).textFieldStyle(.roundedBorder).padding(.horizontal, 14).padding(.top, 12)
+            if !filter.isEmpty, RoadmapStatus.allCases.allSatisfy({ boardItems($0).isEmpty }) {
+                HStack(spacing: 8) {
+                    Text("No roadmap item’s title or detail contains “\(filter)”.")
+                        .font(.callout).foregroundStyle(.secondary).lineLimit(2).layoutPriority(-1)
+                    Spacer(minLength: 8)
+                    Button("Clear") { filter = "" }.controlSize(.small).fixedSize()
+                }.padding(.horizontal, 14)
+            }
             ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: 12) {
                     ForEach(RoadmapStatus.allCases, id: \.self) { status in
                         VStack(alignment: .leading, spacing: 10) {
-                            HStack { Circle().fill(statusColor(status)).frame(width: 7,height: 7); Text(status.title).font(.headline); Spacer(); Text("\(planning.document.items(in: status).count)").foregroundStyle(.secondary) }
+                            HStack {
+                                Circle().fill(statusColor(status)).frame(width: 7,height: 7)
+                                Text(status.title).font(.headline)
+                                Spacer()
+                                Text(boardCountLabel(status)).foregroundStyle(.secondary).fixedSize()
+                                    .help(filter.isEmpty ? "Items in this status" : "Shown of total, with a title filter applied")
+                            }
                             ScrollView {
                                 LazyVStack(spacing: 9) {
-                                    ForEach(planning.document.items(in: status).filter { filter.isEmpty || ($0.title + " " + $0.detail).localizedStandardContains(filter) }) { item in card(item) }
+                                    ForEach(boardItems(status)) { item in card(item) }
                                 }
                             }
                         }.padding(12).frame(width: 245).frame(maxHeight: .infinity)

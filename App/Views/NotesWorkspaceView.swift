@@ -263,6 +263,17 @@ struct NotesWorkspaceView: View {
                 Text(session.project == nil ? "Your project keeps its own notes and file locations." : "No Markdown notes yet.")
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            } else if filteredNotes.isEmpty {
+                // A filter that matches nothing used to leave an empty list with
+                // no explanation, which looks identical to a project whose
+                // notes all disappeared.
+                HStack(spacing: 8) {
+                    Text("No filename contains “\(filter)”.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button("Clear") { filter = "" }.controlSize(.small).fixedSize()
+                }
             }
             ScrollView {
                 LazyVStack(spacing: 5) {

@@ -19,6 +19,7 @@ struct ConnectionsView: View {
                     Text("1 hop").tag(1); Text("2 hops").tag(2)
                 }.pickerStyle(.segmented).labelsHidden().frame(width: 145).fixedSize()
                 Button { graph.showList.toggle() } label: { Label(graph.showList ? "Graph" : "List", systemImage: graph.showList ? "point.3.connected.trianglepath.dotted" : "list.bullet") }
+                    .help(graph.showList ? "Show the spatial graph instead of the list" : "Show every entity as a list instead of the graph")
                     .fixedSize()
                 Button { graph.rebuild() } label: { Image(systemName: "arrow.clockwise") }.help("Rebuild saved-note connections")
                     .disabled(graph.isBuilding)
@@ -141,18 +142,39 @@ struct ConnectionsView: View {
     private var connectionList: some View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("Find an entity in this neighbourhood", text: $graph.listFilter).textFieldStyle(.roundedBorder)
-            Text("The list includes the full logical neighbourhood, not just individually rendered nodes.").font(.caption).foregroundStyle(.secondary)
-            List(graph.listNodes) { node in
-                Button { graph.inspect(node.id) } label: {
-                    HStack {
-                        Image(systemName: node.kind == .note ? "doc.text" : "checklist")
-                            .foregroundStyle(node.kind == .note ? Color.blue : FolioStyle.gold)
-                        VStack(alignment: .leading, spacing: 4) { Text(node.title); Text(node.group).font(.caption).foregroundStyle(.secondary) }
-                        Spacer()
-                        if node.isMissing { Text("Missing").font(.caption).foregroundStyle(.orange) }
-                        if node.id == graph.selected { Image(systemName: "checkmark") }
-                    }.padding(.vertical, 5)
-                }.buttonStyle(.plain)
+            HStack(spacing: 8) {
+                Text("The list includes the full logical neighbourhood, not just individually rendered nodes.")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2).layoutPriority(-1)
+                Spacer(minLength: 8)
+                if !graph.listFilter.isEmpty {
+                    Button("Clear Filter") { graph.listFilter = "" }.controlSize(.small).fixedSize()
+                }
+            }
+            if graph.listNodes.isEmpty {
+                // An empty list has to say why it is empty: a term that matches
+                // nothing and a project with no links at all are different
+                // situations and need different next steps.
+                ContentUnavailableView {
+                    Label(graph.listFilter.isEmpty ? "Nothing is linked yet" : "No entity matches",
+                          systemImage: graph.listFilter.isEmpty ? "point.3.connected.trianglepath.dotted" : "magnifyingglass")
+                } description: {
+                    Text(graph.listFilter.isEmpty
+                         ? "This neighbourhood has no entities. Add a wikilink between two notes, or link a roadmap item to a note, and it appears here."
+                         : "No entity title or group contains \u{201C}\(graph.listFilter)\u{201D}. Clear the filter to see all \(graph.logical?.nodes.count ?? 0) entities.")
+                }
+            } else {
+                List(graph.listNodes) { node in
+                    Button { graph.inspect(node.id) } label: {
+                        HStack {
+                            Image(systemName: node.kind == .note ? "doc.text" : "checklist")
+                                .foregroundStyle(node.kind == .note ? Color.blue : FolioStyle.gold)
+                            VStack(alignment: .leading, spacing: 4) { Text(node.title); Text(node.group).font(.caption).foregroundStyle(.secondary) }
+                            Spacer()
+                            if node.isMissing { Text("Missing").font(.caption).foregroundStyle(.orange) }
+                            if node.id == graph.selected { Image(systemName: "checkmark") }
+                        }.padding(.vertical, 5)
+                    }.buttonStyle(.plain)
+                }
             }
         }.padding(16)
     }

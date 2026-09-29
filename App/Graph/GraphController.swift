@@ -54,6 +54,11 @@ final class GraphController {
         hasScanned = false; isBuilding = false; failure = nil; notice = nil
         focus = notes.first.map { .note($0.id) } ?? roadmap.items.first.map { .task($0.id) }
         selected = focus; camera = .init(); hops = 1; showList = false; expanded = []
+        // The list filter belongs to the project it was typed in. Without this,
+        // opening a second project after filtering in the first left the
+        // Connections list silently narrowed by a term the user could no longer
+        // see, which reads as a project that has no connections.
+        listFilter = ""
         adaptBudget()
     }
     func setRoadmap(_ value: RoadmapDocument) {
