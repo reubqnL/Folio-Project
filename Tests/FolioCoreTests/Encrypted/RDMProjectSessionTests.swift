@@ -81,4 +81,103 @@ final class RDMProjectSessionTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(hits.count, 1)
         await reopened.close()
     }
+
+    // MARK: - Persistent encrypted working state
+
+    func testUnsavedDraftsSurviveCloseAndReopen() async throws {
+        let parent = try folder(); defer { try? FileManager.default.removeItem(at: parent) }
+        let file = parent.appendingPathComponent("project.rdm")
+        let created = try await RDMProjectSession.create(at: file, project: RDMFixtures.project(), passphrase: RDMFixtures.passphrase)
+        let draft = RDMWorkingDraft(id: UUID(), path: "Notes/WIP.md", markdown: "DRAFT_CANARY unsaved text", updatedAt: 5_000)
+        try await created.session.stageDraft(draft)
+        await created.session.close()
+        let reopened = try await RDMProjectSession.open(at: file, passphrase: RDMFixtures.passphrase)
+        let restored = try await reopened.restoreWorkingState()
+        guard case .current(let state) = restored else {
+            await reopened.close(); return XCTFail("Expected current working state, got \(restored)")
+        }
+        XCTAssertEqual(state.drafts, [draft])
+        await reopened.close()
+    }
+
+    func testDiscardingDraftsClearsWorkingCopiesWhenNoneRemain() async throws {
+        let parent = try folder(); defer { try? FileManager.default.removeItem(at: parent) }
+        let file = parent.appendingPathComponent("project.rdm")
+        let created = try await RDMProjectSession.create(at: file, project: RDMFixtures.project(), passphrase: RDMFixtures.passphrase)
+        let first = RDMWorkingDraft(id: UUID(), path: "Notes/One.md", markdown: "first draft", updatedAt: 1)
+        let second = RDMWorkingDraft(id: UUID(), path: "Notes/Two.md", markdown: "second draft", updatedAt: 2)
+        try await created.session.stageDraft(first)
+        try await created.session.stageDraft(second)
+        try await created.session.discardDraft(id: first.id)
+        let remaining = try await created.session.restoreWorkingState()
+        guard case .current(let state) = remaining else {
+            await created.session.close(); return XCTFail("Expected current working state, got \(remaining)")
+        }
+        XCTAssertEqual(state.drafts, [second])
+        try await created.session.discardDraft(id: second.id)
+        let cleared = try await created.session.restoreWorkingState()
+        XCTAssertEqual(cleared, .empty)
+        await created.session.close()
+    }
+
+    func testStaleWorkingStateBlocksStagingUntilExplicitlyResolved() async throws {
+        let parent = try folder(); defer { try? FileManager.default.removeItem(at: parent) }
+        let file = parent.appendingPathComponent("project.rdm")
+        let created = try await RDMProjectSession.create(at: file, project: RDMFixtures.project(), passphrase: RDMFixtures.passphrase)
+        let workInProgress = UUID()
+        try await created.session.stageDraft(.init(id: workInProgress, path: "Notes/WIP.md", markdown: "recover me", updatedAt: 1))
+        try await created.session.stageDraft(.init(id: workInProgress, path: "Notes/WIP.md", markdown: "recover me v2", updatedAt: 2))
+        try FileManager.default.removeItem(at: parent.appendingPathComponent(".folio/project.rdm.rdmworking.0"))
+        let restored = try await created.session.restoreWorkingState()
+        guard case .stale = restored else {
+            await created.session.close(); return XCTFail("Incomplete working history must surface stale, got \(restored)")
+        }
+        do {
+            try await created.session.stageDraft(.init(id: UUID(), path: "Notes/Other.md", markdown: "x", updatedAt: 3))
+            XCTFail("Staging over stale working state was accepted")
+        } catch RDMError.recoveryRequired { }
+        let accepted = try await created.session.resolveWorkingState()
+        XCTAssertEqual(accepted?.drafts.first?.markdown, "recover me v2")
+        try await created.session.stageDraft(.init(id: UUID(), path: "Notes/Other.md", markdown: "after review", updatedAt: 4))
+        let after = try await created.session.restoreWorkingState()
+        guard case .current(let state) = after else {
+            await created.session.close(); return XCTFail("Expected current state after resolution, got \(after)")
+        }
+        XCTAssertEqual(state.drafts.count, 2)
+        await created.session.close()
+    }
+
+    func testCheckpointRefreshesTheEncryptedIndexCacheWithoutPlaintextResidue() async throws {
+        let parent = try folder(); defer { try? FileManager.default.removeItem(at: parent) }
+        let file = parent.appendingPathComponent("project.rdm")
+        let created = try await RDMProjectSession.create(at: file, project: RDMFixtures.project(), passphrase: RDMFixtures.passphrase)
+        let cache = parent.appendingPathComponent(".folio/project.rdm.rdmindex")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: cache.path))
+        let next = RDMFixtures.project("replacement private canary")
+        _ = try await created.session.checkpoint(next)
+        await created.session.close()
+        let bytes = try Data(contentsOf: cache)
+        for needle in ["PRIVATE_NOTE_CANARY", "replacement private canary", "Secret title.md", "PRIVATE_PROJECT_CANARY"] {
+            XCTAssertNil(bytes.range(of: Data(needle.utf8)), "\(needle) leaked into the index cache")
+        }
+        let reopened = try await RDMProjectSession.open(at: file, passphrase: RDMFixtures.passphrase)
+        let hits = try await reopened.search("replacement private canary")
+        XCTAssertEqual(hits.count, 1)
+        await reopened.close()
+    }
+
+    func testCorruptedIndexCacheFallsBackToAnInMemoryRebuild() async throws {
+        let parent = try folder(); defer { try? FileManager.default.removeItem(at: parent) }
+        let file = parent.appendingPathComponent("project.rdm")
+        let created = try await RDMProjectSession.create(at: file, project: RDMFixtures.project(), passphrase: RDMFixtures.passphrase)
+        await created.session.close()
+        let cache = parent.appendingPathComponent(".folio/project.rdm.rdmindex")
+        var bytes = try Data(contentsOf: cache)
+        bytes[bytes.count - 1] ^= 0xFF
+        try bytes.write(to: cache)
+        let reopened = try await RDMProjectSession.open(at: file, passphrase: RDMFixtures.passphrase)
+        let hits = try await reopened.search("private canary")
+        XCTAssertEqual(hits.count, 1)
+        await reopened.close()
+    }
 }

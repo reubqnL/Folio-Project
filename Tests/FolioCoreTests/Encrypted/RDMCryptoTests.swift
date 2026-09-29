@@ -42,9 +42,11 @@ final class RDMCryptoTests: XCTestCase, @unchecked Sendable {
         let box = try RDMCrypto.seal(Data("secret text".utf8), key: key, aad: aad)
         XCTAssertThrowsError(try RDMCrypto.open(box, key: key, aad: Data("wrong project".utf8)))
         XCTAssertThrowsError(try RDMCrypto.open(box, key: other, aad: aad))
-        var corrupt = box.ciphertext; corrupt[0] ^= 1
+        var corrupt = box.ciphertext
+        corrupt.withUnsafeMutableBytes { (bytes: UnsafeMutableRawBufferPointer) in bytes[0] ^= 1 }
         XCTAssertThrowsError(try RDMCrypto.open(.init(nonce: box.nonce, ciphertext: corrupt, tag: box.tag), key: key, aad: aad))
-        var tag = box.tag; tag[0] ^= 1
+        var tag = box.tag
+        tag.withUnsafeMutableBytes { (bytes: UnsafeMutableRawBufferPointer) in bytes[0] ^= 1 }
         XCTAssertThrowsError(try RDMCrypto.open(.init(nonce: box.nonce, ciphertext: box.ciphertext, tag: tag), key: key, aad: aad))
     }
     func testErasedHandleCannotBeReusedAndLockIsIdempotent() throws {

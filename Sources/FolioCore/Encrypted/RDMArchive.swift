@@ -1,6 +1,6 @@
 import Foundation
 
-public struct RDMNote: Equatable, Sendable, Identifiable {
+public struct RDMNote: Equatable, Sendable, Identifiable, Codable {
     public let id: UUID
     public let path: String
     public let markdown: String

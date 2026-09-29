@@ -49,11 +49,26 @@ final class SQLiteStatement {
 final class SQLiteConnection: @unchecked Sendable {
     private(set) var handle: OpaquePointer?
     init(file: URL) throws {
+        // Apple's SQLite rejects paths below macOS's temporary-directory symlink
+        // hierarchy when SQLITE_OPEN_NOFOLLOW is supplied. LocalSearchIndex has
+        // already validated and created the cache directory, and it validates
+        // any pre-existing database as a regular file before reaching SQLite.
+        #if canImport(Darwin)
+        let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX
+        #else
         let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW
+        #endif
         let result = sqlite3_open_v2(file.path, &handle, flags, nil)
         guard result == SQLITE_OK, handle != nil else { sqlite3_close_v2(handle); handle = nil; throw SearchIndexError.sqlite(result) }
         sqlite3_busy_timeout(handle, 150)
+        #if !canImport(Darwin)
+        // Apple's system libsqlite3 is built with SQLITE_OMIT_LOAD_EXTENSION:
+        // run-time extension loading is compiled out of both the SDK header and
+        // the dylib (sqlite3_compileoption_get reports OMIT_LOAD_EXTENSION), so
+        // there is nothing to enable or disable there. Everywhere else the C API
+        // exists, so explicitly assert the default-disabled state.
         sqlite3_enable_load_extension(handle, 0)
+        #endif
         sqlite3_limit(handle, SQLITE_LIMIT_LENGTH, 16 * 1024 * 1024)
         sqlite3_limit(handle, SQLITE_LIMIT_SQL_LENGTH, 64 * 1024)
         sqlite3_limit(handle, SQLITE_LIMIT_ATTACHED, 0)

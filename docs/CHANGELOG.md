@@ -1,3 +1,101 @@
+# Fix — macOS core compile follow-up (2026-09-29)
+
+## Fixed
+
+- The first post-libarchive Mac compile exposed two additional portability defects: a malformed `var contents: [text]` declaration in the raw-HTML Markdown path and an unavailable `sqlite3_enable_load_extension` call. The parser declaration now uses the intended inferred `[String]` array, and the SQLite call is compiled only on non-Darwin platforms because Apple’s system SQLite is built with `SQLITE_OMIT_LOAD_EXTENSION`.
+
+## Evidence
+
+- On Apple Swift 6.3.2 / macOS 26 / arm64, `bash scripts/test-core.sh` now passes the libarchive compilation stage and reaches FolioCore compilation; this follow-up was made directly from the reported compiler output. A complete test run is still required after pulling this fix.
+
+# Fix — macOS compile: vendored libarchive headers (2026-09-29)
+
+## Fixed
+
+- First Mac build attempt (Swift 6.3.2, macOS 26, Xcode 26) failed compiling `Sources/FolioRDMPrimitives/FolioArchive.c` with `'archive.h' file not found`: macOS ships the compiled system libarchive (the SDK exposes `libarchive.tbd`) but not its headers. Folio now compiles against a vendored, declaration-subset mirror of the libarchive 3.7.7 public headers (`Sources/FolioRDMPrimitives/vendor/libarchive/`, BSD-2-Clause; provenance and extension rules in its README) and links the system `libarchive` — no Homebrew or other installs needed on the Mac. Linux builds use the same headers and need the distro `libarchive` development package.
+- The subset is private to `FolioRDMPrimitives` (`cSettings: .headerSearchPath("vendor/libarchive")`); every constant and prototype Folio uses is verbatim upstream, and `FolioArchive.c` compiles clean under `gcc -Wall -Wextra -Werror` against it.
+
+## Notes
+
+- App Store release note: App Review flags system-libarchive symbol references as non-public API. If Folio ever ships on the Mac App Store, switch to a statically built libarchive. Tracked as a release-track item (vendor README).
+
+# Increment 12 — large-file/long-line benchmark harness (N02)
+
+## Added
+
+- `BenchmarkCorpora` + `BenchmarkStatistics` (`Sources/FolioCore/Markdown/MarkdownBenchmarks.swift`): deterministic, named benchmark inputs sized against `MarkdownLimits` — a realistic small note, 256 KB and near-budget (500 KB) mixed-construct notes, an over-budget note that must take the limitation/excerpt path, 16 lines of ~30K characters just under the line-length cap, 9,992 blocks just under the rendering budget, and a mixed-construct stress note (front matter, setext, tables with escapes, emoji, wikilinks). Names and shapes are evidence API so recorded measurements stay comparable across machines and runs.
+- `FolioBenchmarkProbe` (`Sources/FolioBenchmarkProbe/`) — measures the editor-critical paths over those corpora: full parse, per-keystroke incremental reparse (allocation-honest, plus a splice-only figure on the near-budget note), link scan and excerpt. Warmups + repeated samples; median/p95/min printed as a table or `--json` machine-readable output. **Timings are printed, never asserted anywhere** — they become evidence only when recorded on the machine class that will sign the release (decision 26; decision 50 gives that gate no waiver path).
+- `scripts/run-benchmarks.sh` — release-builds the probe and records `Evidence/benchmarks.json` (Evidence/ stays uncommitted; attach the JSON and machine details when crediting the gate).
+- 9 focused tests (421 total in source): corpus determinism, unique names and exactly one edit marker per corpus, budget targeting (near-budget under the parse cap, over-budget over it, long lines under the line cap), parse outcomes on every corpus including the limitation path, incremental-vs-full parse equality on every corpus, link-scan span round-trips on the stress corpus, and the statistics definitions (median odd/even, nearest-rank p95, empty input never traps).
+
+## Notes
+
+- No measurements are recorded yet: this environment cannot build Swift. The harness is ready; `bash scripts/run-benchmarks.sh` on an Apple Silicon Mac produces the evidence for the `inputAndLargeDocumentCorrectness` release gate.
+
+# Increment 11 — compact link repair (N02)
+
+## Added
+
+- `NoteLinkRepair` (`Sources/FolioCore/Markdown/NoteLinkRepair.swift`): broken and ambiguous note links are now visible and repairable (baseline §4.2; decision 12). Every authored note link is found at an exact source span with the exact semantics of the inline parser and the knowledge graph — code, literal HTML, metadata and rules never contribute; blocked, external and pure-anchor targets are not note links; escapes and images are excluded.
+- A confirmed repair rewrites exactly one link's target — the label, the `|alias` and `#section` anchors keep the author's form (title links stay titles, path links stay paths) — and the original link is kept until the replacement is confirmed. Each edit is bound to the source digest it was computed against and refuses stale or mismatched application; a replacement that would not re-parse as a note link at the same site (embedded `]]`, `|`, `)` and similar) is refused, never half-applied.
+- The compact repair sheet (decision 12 — folder path, tags and modification date per candidate) lists links with no matching note or several matching notes, with one explicit confirmation per replacement; a refusal never changes the note. Reachable as "Repair Note Links…" in the toolbar and the command palette (⌘⇧E, safely remappable).
+- `repairLinks` joins the command catalog with the same safe-remapping policy as every other command (reserved keys, conflicts named, never silently rebound).
+- 23 focused tests (412 total in source): scanner equivalence pinned against both `MarkdownInlineParser` targets and `GraphLinkExtractor` targets over an adversarial corpus (escapes, code spans, nested emphasis, labels, unclosed forms, duplicate links, table pipes and escapes, CRLF/emoji spans, block-kind policy), resolution inspection (missing/unique/ambiguous), form-preserving replacement text, single-occurrence rewrites, stale/span/blocked refusals, and repairs through headings, quotes, list items and table cells.
+
+## Notes
+
+- Occurrences whose authored target does not appear verbatim in the source (table-cell escape rewriting such as `[[x\|y]]` content) are not offered for repair — a repair must rewrite exactly what the author wrote. The scanner's recognition still matches the parser exactly; only the rewriteable set is narrower.
+- A `]` inside a link label breaks the outer `[label](target)` form in this parser (the inner wikilink becomes a top-level link); the scanner and tests pin that exact behaviour rather than papering over it.
+
+# Increment 10 — incremental Markdown reparse (N02)
+
+## Added
+
+- `MarkdownReparseSession` (`Sources/FolioCore/Markdown/MarkdownIncremental.swift`): the reading preview now re-parses only the changed region of a note per keystroke. A line-level diff bounds a reparse window; blocks outside it are spliced with their exact spans, content+occurrence identities and merged warnings, so untouched preview blocks keep stable `ForEach` identities and scroll anchors. The result is always parse-equal to `MarkdownParser.parse` on the same source — the splice is proven before use, and every unprovable case (limited parses, over-budget sources, full-document edits, changed block budgets) falls back to a full parse.
+- Boundary proofs around the splice: a 2-line lookahead window floor (setext underlines and table alignment rows decide boundaries ahead), window-EOF proofs (`rule`/`listItem` at EOF can pair with a suffix line; blank-extension for open paragraphs/quotes/HTML; fence-close scan for unclosed code), straddle growth so no old block tail is dropped, and the front-matter scan treated as document-wide (an edit in the first 129 lines reparses from line 0; mid-document windows can never form metadata blocks).
+- `MarkdownParser` internals restructured for the splice (`parseDetailed`/`project`/`splitLines`) with byte-identical public `parse`/`excerpt` output; the existing 23 parser tests cover the unchanged surface.
+- The reading preview (`MarkdownPreviewView`) keeps one session per document and preview mode, runs `reparse` on a detached task away from the main actor, and rebuilds the session when excerpt mode toggles or the document changes.
+- 23 focused tests: adversarial splice swallows (fence/table/quote), unclosed fences to EOF, closing fences appearing later, setext partner changes across the splice, front matter added/removed/inserted/never-suffix-reused, the two-line lookahead hazard, edit-then-undo, duplicate-block renumbering, untouched-block id stability, empty/CRLF/emoji sources, budget fallbacks, and a 4,000-block document where one edit reparses at most 6 blocks (timings printed, never asserted).
+- Development evidence: the algorithm survived 32,000 randomized edit-sequence equivalence checks against full parses via an out-of-repository Python mirror (not shipped, not a substitute for the Swift test run).
+
+# Increment 09 — honest durability acknowledgement (N01 contract)
+
+## Added
+
+- `VaultDurability` (`Sources/FolioCore/Storage/VaultDurability.swift`): the N01 seven-state acknowledgement model — `notCreated`, `loadedFromDisk`, `editsPending`, `writing`, `durableOnDisk`, `externalConflict`, `failed` — with honest labels, scoped explanations and `acknowledgesDurability` true only after the storage barrier is crossed. Queued or timed work can never be displayed as saved.
+- `VaultCheckpointState` and `VaultRemoteState`: the contract's separation axes — `.rdm` archive construction is displayed apart from local durability (a stale archive is never described as up to date), and this build's missing sync is shown explicitly as "Local only — no sync" rather than implied.
+- `SaveCoalescing` named, documented measurements: 250 ms edit debounce target and 500 ms bounded maximum delay after the first dirty edit; the docs state plainly that these schedule writes and do not acknowledge them.
+- Editor status line now derives from the model (`OpenNoteDocument.durability`) with barrier-scoped help text; the notes status bar shows the remote-state axis. Encrypted workspace shows all three axes (working-copy draft durability, checkpoint state, sync) as one summary line with per-axis explanations, tracks confirmed vs pending working-copy writes with a generation guard so a superseded debounced write cannot confirm newer text, and reports checkpoint failures without discarding drafts.
+- "Cancelling creates no file and no hidden draft on disk" is now stated on the new-note sheet (contract state 1).
+- 10 focused tests: resolution/precedence matrix, label-honesty rules (only acknowledged states may say "Durable"/"Saved"), scoped explanations, checkpoint/remote separation wording, and measured coalescing bounds including a 40-edit continuous-typing simulation.
+
+## Fixed
+
+- Stale development captions: the launcher no longer calls the encrypted preview "memory-only"/"read-only" or Increment 07, the encrypted landing no longer lists the persistent encrypted index as a future gate, and the unlock notice no longer claims search results are unpersisted.
+
+## Evidence and limits
+
+The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures. This increment's sources and tests pass full swift-syntax parsing (110 Swift files, 0 syntax failures); the 10 new tests must run via `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence. The storage barrier's APFS/power-loss behaviour remains unverified on Mac. This is not safe for sensitive data or release; plain-vault data remains plaintext.
+
+---
+
+# Increment 08 — persistent encrypted working storage
+
+## Added
+
+- `RDMWorkingStore`: unsaved encrypted-project drafts persist locally as two alternating AES-256-GCM sealed slot records (`.folio/<name>.rdmworking.0/1`) chained by generation and previous-record digest, written through the atomic `.folio` staging path with no plaintext residue.
+- Fail-closed restore classification (`.empty` / `.current` / `.stale`): torn writes, missing history, single-slot rollback, mixed epochs and unauthenticated copies surface for explicit review and block further draft writes until a reviewed `resolve()` re-anchors a fresh epoch; set-aside bytes are preserved as private `.folio` copies rather than destroyed.
+- Encrypted derived-index cache (`.folio/<name>.rdmindex`) bound to its archive snapshot; cache hits warm the search index on open, and every cache failure mode falls back to the in-memory rebuild without affecting search correctness.
+- `RDMProjectSession` working-state API (`restoreWorkingState`, `stageDraft`, `discardDraft`, `resolveWorkingState`) with checkpoint-first, cache-second ordering.
+- Native encrypted UI: 250 ms debounced draft staging into the encrypted working copy, restore of the most recent unsaved draft after unlock, local-draft discard after a successful checkpoint, an explicit "Review local working copies" action, and captions that describe the real draft/index behaviour.
+- Focused tests for chaining/round trip, the stale-detection matrix, reviewed resolution with byte preservation, draft bounds/validation, plaintext canaries, index-cache round trip/corruption/snapshot binding, and session-level draft survive-close/reopen, discard, stale-block and cache fallback scenarios.
+
+## Evidence and limits
+
+The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures. This increment's sources and tests pass full swift-syntax parsing (108 Swift files, 0 syntax failures); the new test executions must run via `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence. Mac SDK/CryptoKit/APFS, power-loss, Keychain, accessibility and independent security evidence remain blocked. This is not safe for sensitive data or release; plain-vault data remains plaintext.
+
+---
+
 # Increment 07 — encrypted `.rdm` foundation
 
 ## Added

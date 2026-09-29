@@ -137,6 +137,7 @@ struct RootView: View {
         .sheet(isPresented: $session.capture.showingReview) { CaptureReviewView(session: session, capture: session.capture) }
         .sheet(isPresented: $session.speech.showingRecorder) { VoiceCaptureView(session: session, speech: session.speech) }
         .sheet(item: $session.linkChoice) { NoteLinkChoiceView(session: session, choice: $0) }
+        .sheet(isPresented: $session.showingLinkRepair) { LinkRepairView(session: session) }
         .alert("Folio needs your attention", isPresented: Binding(
             get: { session.errorMessage != nil },
             set: { if !$0 { session.errorMessage = nil } }

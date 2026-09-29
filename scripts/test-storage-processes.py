@@ -27,6 +27,28 @@ args.temp_parent.mkdir(parents=True, exist_ok=True)
 checks = []
 
 
+def set_extended_attribute(path, name, value):
+    if hasattr(os, "setxattr"):
+        os.setxattr(path, name, value)
+        return
+    # Some macOS Python distributions omit the xattr methods even though the
+    # platform utility is available. Keep the process test independent of the
+    # Python build while retaining the same metadata assertion.
+    subprocess.run(["xattr", "-wx", name.decode("ascii"), value.hex(), str(path)], check=True)
+
+
+def get_extended_attribute(path, name):
+    if hasattr(os, "getxattr"):
+        return os.getxattr(path, name)
+    result = subprocess.run(
+        ["xattr", "-px", name.decode("ascii"), str(path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return bytes.fromhex(result.stdout.strip())
+
+
 def run(command, root, *rest):
     value = subprocess.run([str(probe), command, str(root), *rest], text=True, capture_output=True, timeout=30)
     assert value.returncode == 0, (value.args, value.stderr, value.stdout)
@@ -102,12 +124,12 @@ with tempfile.TemporaryDirectory(dir=args.temp_parent, prefix='folio-metadata-te
     run('create', root, 'Metadata', 'before')
     file = root / 'Notes/Metadata.md'
     file.chmod(0o640)
-    os.setxattr(file, b'user.folio.test', b'preserve this attribute')
+    set_extended_attribute(file, b'user.folio.test', b'preserve this attribute')
     initial = file.stat()
     run('save', root, 'Notes/Metadata.md', 'after')
     assert stat.S_IMODE(file.stat().st_mode) == 0o640
     assert file.stat().st_uid == initial.st_uid and file.stat().st_gid == initial.st_gid
-    assert os.getxattr(file, b'user.folio.test') == b'preserve this attribute'
+    assert get_extended_attribute(file, b'user.folio.test') == b'preserve this attribute'
     checks.append({'case': 'Unix mode, ownership and extended attribute survive replacement', 'status': 'PASS'})
 
 report = {

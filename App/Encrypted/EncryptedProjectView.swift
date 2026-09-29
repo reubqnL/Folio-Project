@@ -77,7 +77,7 @@ struct EncryptedProjectView: View {
             Spacer()
             Image(systemName: "lock.doc").font(.system(size: 48)).foregroundStyle(FolioStyle.gold)
             Text("Encrypted projects").font(.largeTitle.weight(.semibold))
-            Text("Open or create an authenticated .rdm project. Its working search index stays in memory; it is not connected to the plain-vault search cache.")
+            Text("Open or create an authenticated .rdm project. Its working search index is memory-resident with an encrypted local cache; it is never connected to the plain-vault search cache.")
                 .foregroundStyle(.secondary).frame(maxWidth: 620, alignment: .leading)
             if copyIsPreparing {
                 VStack(alignment: .leading, spacing: 9) {
@@ -105,7 +105,7 @@ struct EncryptedProjectView: View {
                     }
                 }
             }
-            Text("Copying is explicit and non-destructive: the plain project is not deleted or rewritten. Mac Keychain, persistent encrypted index and runtime security validation remain separate gates. Do not use this build for sensitive data.")
+            Text("Copying is explicit and non-destructive: the plain project is not deleted or rewritten. Mac Keychain review and runtime security validation remain separate gates. Do not use this build for sensitive data.")
                 .font(.caption).foregroundStyle(.secondary).frame(maxWidth: 620, alignment: .leading)
             Spacer()
         }
@@ -201,11 +201,20 @@ struct EncryptedProjectView: View {
                 Spacer()
                 Button("New encrypted note") { controller.beginNewNote() }
                     .disabled(controller.isCheckpointing || controller.hasDraft)
-                Text("No persistent encrypted index yet")
+                Text("Search runs from a memory-only index with an encrypted local cache")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            // N01: unsaved-text durability, archive checkpoint and sync are
+            // shown as separate axes; none of them implies another.
+            Text(controller.durabilitySummary)
+                .font(.caption).foregroundStyle(FolioStyle.gold)
+                .help(controller.durabilityExplanation)
             if let notice = controller.notice {
                 Text(notice).font(.caption).foregroundStyle(.secondary)
+            }
+            if controller.needsWorkingReview {
+                Button("Review local working copies") { Task { await controller.resolveWorkingStateNow() } }
+                    .buttonStyle(.bordered)
             }
             HStack {
                 TextField("Search encrypted notes in memory", text: $controller.query)
@@ -226,7 +235,7 @@ struct EncryptedProjectView: View {
                 Divider()
                 notePreview
             }
-            Text("Read-only preview boundary. Editing, persistent encrypted indexing, Keychain storage and Mac runtime validation remain separate gates.")
+            Text("Draft text is stored only in the encrypted local working copy until you approve a checkpoint. Keychain storage and Mac runtime validation remain separate gates.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -240,6 +249,7 @@ struct EncryptedProjectView: View {
                         TextField("Note path", text: $controller.draftPath)
                             .textFieldStyle(.roundedBorder)
                             .font(.headline)
+                            .onChange(of: controller.draftPath) { controller.draftTextDidChange() }
                         Spacer()
                         Button("Discard") { controller.cancelEditing() }
                         Button(controller.isCheckpointing ? "Writing…" : "Write encrypted checkpoint") {
@@ -248,13 +258,14 @@ struct EncryptedProjectView: View {
                         .buttonStyle(.borderedProminent)
                         .disabled(controller.isCheckpointing)
                     }
-                    Text("This is an explicit draft. It remains in memory and is not written until you approve the checkpoint.")
+                    Text("This is an explicit draft. It is kept in the encrypted local working copy and joins the project only when you approve the checkpoint.")
                         .font(.caption).foregroundStyle(.secondary)
                     TextEditor(text: $controller.draftMarkdown)
                         .font(.system(.body, design: .monospaced))
                         .scrollContentBackground(.hidden)
                         .padding(10).background(FolioStyle.editor)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .onChange(of: controller.draftMarkdown) { controller.draftTextDidChange() }
                 }
                 .padding(18)
             } else if let note = controller.selectedNote {

@@ -10,7 +10,7 @@ overview, repository map and build instructions.
 | Document | Contents |
 |---|---|
 | [`native-development.md`](native-development.md) | Native build, verification commands, open Mac gates, privacy boundaries and the state of the encrypted container. This was the package `README.md` before the reorganisation. |
-| [`CHANGELOG.md`](CHANGELOG.md) | Increment history, newest first (07 is current). |
+| [`CHANGELOG.md`](CHANGELOG.md) | Increment history, newest first (12 is current). |
 
 ### Architecture and security contracts
 
@@ -20,13 +20,13 @@ expected to guarantee.
 
 | Document | Area |
 |---|---|
-| [`architecture/STORAGE-CONTRACT.md`](architecture/STORAGE-CONTRACT.md) | Plain-Markdown vault, journaling, crash recovery, reconciliation |
+| [`architecture/STORAGE-CONTRACT.md`](architecture/STORAGE-CONTRACT.md) | Plain-Markdown vault, journaling, crash recovery, durability acknowledgement (N01), reconciliation |
 | [`architecture/READING-SEARCH-CONTRACT.md`](architecture/READING-SEARCH-CONTRACT.md) | Local search index and reading workflow |
 | [`architecture/PLANNING-GRAPH-CONTRACT.md`](architecture/PLANNING-GRAPH-CONTRACT.md) | Roadmap, timeline projection and knowledge graph |
 | [`architecture/CAPTURE-SECURITY-CONTRACT.md`](architecture/CAPTURE-SECURITY-CONTRACT.md) | Model capture: explicit context, review before apply, stale-edit protection |
 | [`architecture/SPEECH-SECURITY-CONTRACT.md`](architecture/SPEECH-SECURITY-CONTRACT.md) | On-device voice capture consent, lifecycle and handoff |
 | [`architecture/RDM-SECURITY-CONTRACT.md`](architecture/RDM-SECURITY-CONTRACT.md) | Threat model for the encrypted container |
-| [`architecture/ENCRYPTED-RDM-CONTRACT.md`](architecture/ENCRYPTED-RDM-CONTRACT.md) | Encrypted `.rdm` format, KDF, archive, checkpoint and working index |
+| [`architecture/ENCRYPTED-RDM-CONTRACT.md`](architecture/ENCRYPTED-RDM-CONTRACT.md) | Encrypted `.rdm` format, KDF, archive, checkpoint, working store and index cache |
 
 ### Planning and decisions
 

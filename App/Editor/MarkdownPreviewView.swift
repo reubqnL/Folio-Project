@@ -14,6 +14,13 @@ private struct PreviewRenderKey: Hashable {
     let excerpt: Bool
 }
 
+/// A reparse session is only valid for one document in one preview mode;
+/// switching between full preview and excerpt rebuilds it from scratch.
+private struct PreviewParseMode: Hashable {
+    let document: UUID
+    let excerpt: Bool
+}
+
 struct MarkdownPreviewView: View {
     @Bindable var document: OpenNoteDocument
     @Bindable var session: WorkspaceSession
@@ -25,6 +32,8 @@ struct MarkdownPreviewView: View {
     @State private var parsing = false
     @State private var excerptApproved = false
     @State private var previewNotice: String?
+    @State private var reparseSession: MarkdownReparseSession?
+    @State private var reparseMode: PreviewParseMode?
 
     private var currentPreview: MarkdownDocument? { parsedDocumentID == document.id ? parsed : nil }
     private var renderKey: PreviewRenderKey {
@@ -90,16 +99,29 @@ struct MarkdownPreviewView: View {
             parsing = true
             let key = renderKey
             do { try await Task.sleep(for: .milliseconds(180)) } catch { return }
+            // Read the prior session on the main actor before detaching; the
+            // detached task reuses it on a local copy and hands it back.
             let source = document.text
+            let mode = PreviewParseMode(document: key.document, excerpt: key.excerpt)
+            let prior = reparseMode == mode ? reparseSession : nil
             let work = Task.detached(priority: .userInitiated) {
                 let input = key.excerpt ? MarkdownParser.excerpt(source) : source
-                return MarkdownParser.parse(input)
+                if var session = prior {
+                    let result = session.reparse(input)
+                    return (result.document, session)
+                }
+                let session = MarkdownReparseSession(source: input)
+                return (session.document, session)
             }
-            let result = await withTaskCancellationHandler(operation: { await work.value }, onCancel: { work.cancel() })
+            let (result, session) = await withTaskCancellationHandler(operation: { await work.value }, onCancel: { work.cancel() })
             guard !Task.isCancelled, key == renderKey else { return }
             parsed = result; parsedDocumentID = document.id; parsing = false
+            reparseSession = session; reparseMode = mode
         }
-        .onChange(of: document.id) { _, _ in excerptApproved = false; parsed = nil; parsedDocumentID = nil; previewNotice = nil }
+        .onChange(of: document.id) { _, _ in
+            excerptApproved = false; parsed = nil; parsedDocumentID = nil; previewNotice = nil
+            reparseSession = nil; reparseMode = nil
+        }
     }
 
     private func follow(using reader: ScrollViewProxy) {

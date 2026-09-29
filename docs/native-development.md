@@ -24,7 +24,7 @@ The percentage is a weighted planning estimate, not measured security or correct
 
 ## Evidence obtained on Linux
 
-- **333 core XCTest cases pass in Debug and Release on the recorded Linux runs.**
+- **333 core XCTest cases pass in Debug and Release on the recorded Linux runs.** Increments 08–12 add 23 working-store/session tests, 10 durability-model tests, 23 incremental-reparse tests, 24 link-repair tests and 9 benchmark tests (421 total) whose execution still has to run on a Swift toolchain before counting as evidence.
 - **69 generated workflow/process scenarios pass:** 13 note storage, 12 roadmap storage, 11 reading, 10 planning/graph, 11 capture/storage and 12 synthetic speech/handoff.
 - **6 separate C audio-ring checks pass with AddressSanitizer and UndefinedBehaviorSanitizer**, including 100,000 accepted threaded frames.
 - C warning/static-analysis checks cover Linux sources. Mac Swift is syntax-parsed only.
@@ -35,13 +35,13 @@ Synthetic samples/transcript events and a fixed test model are not microphone/AS
 
 Speech assets require explicit download approval; Apple manages shared models and possible retries. Recording is a separate action. No raw audio file recorder exists in Folio's source. The transcript stays in memory until explicitly reviewed and moved into Capture. That handoff does not run AI or save a note automatically.
 
-Model capture remains explicit-context, review-before-apply and stale-edit protected. Native application/undo is distinct from a successful disk save. Current plain-vault notes, roadmap/recovery and outside-vault search cache remain plaintext. Encrypted `.rdm` now has an experimental authenticated archive/checkpoint foundation, a memory-only derived index and a source-level session/preview/editor boundary; Mac runtime, editing integration and persistent encrypted storage are not complete.
+Model capture remains explicit-context, review-before-apply and stale-edit protected. Native application/undo is distinct from a successful disk save. Current plain-vault notes, roadmap/recovery and outside-vault search cache remain plaintext. Encrypted `.rdm` now has an experimental authenticated archive/checkpoint foundation, a persistent encrypted local working store (unsaved drafts) with an encrypted derived-index cache, and a source-level session/preview/editor boundary; Mac runtime, editing integration, Keychain/recovery UX completion and fault/power-loss evidence are not complete.
 
 ## Still incomplete
 
 Mac app compilation/runtime, Foundation Models/SpeechAnalyzer/TCC, Metal, native editor/undo/accessibility, APFS/power-loss, minimum-Mac and large-vault performance and independent security evidence remain blocked.
 
-Encrypted-workspace UI/keychain/recovery lifecycle, persistent encrypted working storage, E2EE collaboration, installer/updater/migrations and remaining native/editor/reconciliation/recovery polish are not complete. FolioDev/Windows/Android keep the approved deferred scope. No `.app` or `.pkg` has been built here.
+Encrypted-workspace UI/keychain/recovery lifecycle completion, E2EE collaboration, installer/updater/migrations and remaining native/editor/reconciliation/recovery polish are not complete. FolioDev/Windows/Android keep the approved deferred scope. No `.app` or `.pkg` has been built here.
 
 ## Internal engineering commands
 
@@ -62,7 +62,7 @@ On the supported core-test host:
 bash ../scripts/test-core.sh
 ```
 
-Linux needs Swift 6, Clang with sanitizer runtimes, OpenSSL/SQLite development libraries and Python 3. The optional setup script restores the tested Linux toolchain into a cache. All probes generate fresh fixtures; never run crash helpers against real work.
+Linux needs Swift 6, Clang with sanitizer runtimes, OpenSSL/SQLite/libarchive development libraries and Python 3. The optional setup script restores the tested Linux toolchain into a cache. macOS needs no extra archive package: Folio compiles against a vendored declaration-subset of the libarchive 3.7.7 public headers (`Sources/FolioRDMPrimitives/vendor/libarchive/`, see its README for provenance and rules) and links the system libarchive that macOS already ships. All probes generate fresh fixtures; never run crash helpers against real work.
 
 ## Internal Mac speech gates
 
@@ -84,8 +84,17 @@ No speech/audio gate is considered passed because this checklist or native adapt
 
 The supplied logo remains unchanged. The workspace retains one current source archive. Every reported percentage remains separate from mandatory security and release evidence.
 
-## Encrypted `.rdm` foundation
+## Encrypted `.rdm` container
 
-The active source contains a pinned Argon2id implementation, AES-256-GCM/HKDF adapters, strict ZIP64 encrypted manifest/object transport, passphrase/recovery slots and an atomic checkpoint actor. The encrypted suite has 56 passing tests, including deterministic hostile-input, atomic-rebuild and session-boundary coverage. The full core runs have 333 Debug and 333 Release tests passing on Linux.
+The active source contains a pinned Argon2id implementation, AES-256-GCM/HKDF adapters, strict ZIP64 encrypted manifest/object transport, passphrase/recovery slots and an atomic checkpoint actor. Increment 08 adds the persistent encrypted local working store (chained sealed draft records with fail-closed stale review) and the encrypted derived-index cache. Increment 09 adds the explicit N01 durability acknowledgement model (`VaultDurability` with separate checkpoint and sync axes) so the UI cannot display queued or timed work as saved. Increment 10 adds the incremental Markdown reparse (`MarkdownReparseSession`) so the reading preview re-parses only the changed region per keystroke with parse-equal splicing and full-parse fallback. Increment 11 adds compact link repair (`NoteLinkRepair`) so broken and ambiguous note links are visible and repaired one confirmed link at a time without rewriting the note. The recorded encrypted suite has 56 passing tests from Increment 07, with 23 working-store/session tests (08), 10 durability-model tests (09), 23 incremental-reparse tests (10), 24 link-repair tests (11) and 9 benchmark tests (12) pending execution; the last full core runs have 333 Debug and 333 Release tests passing on Linux.
 
-This is not production encryption approval. Mac CryptoKit/APFS parity, Keychain/device-slot runtime validation, recovery rotation, persistent encrypted working/index/cache/WAL design, fuzzing, power-loss, migration and independent cryptographic review remain open. Read `../architecture/ENCRYPTED-RDM-CONTRACT.md`; do not use it for sensitive projects.
+This is not production encryption approval. Mac CryptoKit/APFS parity, Keychain/device-slot runtime validation, recovery rotation, on-demand encrypted object caching, fuzzing, power-loss, migration and independent cryptographic review remain open. Read `../architecture/ENCRYPTED-RDM-CONTRACT.md`; do not use it for sensitive projects.
+
+
+## Benchmark protocol (decision 26; gate `inputAndLargeDocumentCorrectness`)
+
+Measured large-document performance is a release gate with no waiver path (decision 50). The harness is `FolioBenchmarkProbe` over deterministic `BenchmarkCorpora` (names and sizes are evidence API):
+
+- `bash scripts/run-benchmarks.sh` release-builds the probe and records `Evidence/benchmarks.json` (not committed) plus a human table.
+- Operations measured per corpus: full parse, session init + one-edit reparse, splice-only one-edit reparse (near-budget note), link scan, excerpt. Reported as median/p95/min over repeated samples after warmups.
+- Timings are **never asserted** in tests. They count as evidence only when produced on the machine class that will sign the release, recorded together with machine model, OS and thermal state, and reviewed against the acceptance thresholds (which are set only after a first recording — none exist yet).

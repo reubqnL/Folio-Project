@@ -1,133 +1,181 @@
 import Foundation
 
+/// Per-block parse record used by the incremental reparser. Internal: the
+/// public surface stays `parse(_:)`/`excerpt(_:)` with identical results.
+struct ParsedBlockRecord: Equatable, Sendable {
+    var block: MarkdownBlock
+    var digest: String
+    var firstLine: Int
+    var lastLine: Int
+    var warnings: [String]
+}
+
+/// Detailed parse output shared by the full parser and the incremental
+/// session. `lineStarts[i]` is the UTF-16 offset where line `i` begins.
+struct ParsedDocumentRecord: Equatable, Sendable {
+    var blocks: [ParsedBlockRecord]
+    var sourceUTF16Length: Int
+    var lineStarts: [Int]
+    var lineCount: Int
+    var limitation: String?
+}
+
 public enum MarkdownParser {
-    private struct Line {
-        let text: String
-        let start: Int
-        let end: Int
-        var trim: String { text.trimmingCharacters(in: .whitespaces) }
-    }
     public static func parse(_ source: String, limits: MarkdownLimits = .init()) -> MarkdownDocument {
-        let total = source.utf16.count
-        guard (1...2 * 1024 * 1024).contains(limits.maximumUTF8Bytes),
-              (1...128 * 1024).contains(limits.maximumLineUTF16),
-              (1...20_000).contains(limits.maximumBlocks), source.utf8.count <= limits.maximumUTF8Bytes else {
-            return .init(blocks: [], sourceUTF16Length: total, warnings: [], limitation: "This note exceeds the current preview budget. Source editing is unchanged. You can explicitly request an excerpt.")
-        }
+        project(parseDetailed(source, limits: limits))
+    }
+
+    /// Projects a detailed record onto the public document shape, reproducing
+    /// the exact global warning processing (deduplicated, sorted).
+    static func project(_ record: ParsedDocumentRecord) -> MarkdownDocument {
+        .init(
+            blocks: record.blocks.map(\.block),
+            sourceUTF16Length: record.sourceUTF16Length,
+            warnings: Array(Set(record.blocks.flatMap(\.warnings))).sorted(),
+            limitation: record.limitation
+        )
+    }
+
+    /// Splits source into lines exactly the way the parser scans them.
+    static func splitLines(_ source: String) -> (texts: [String], starts: [Int], ends: [Int]) {
         let units = Array(source.utf16)
-        var lines: [Line] = [], start = 0, position = 0
+        var texts: [String] = [], starts: [Int] = [], ends: [Int] = []
+        var start = 0, position = 0
         while position < units.count {
             if units[position] == 10 || units[position] == 13 {
                 let end = position
                 if units[position] == 13 && position + 1 < units.count && units[position+1] == 10 { position += 1 }
                 position += 1
-                lines.append(.init(text: String(decoding: units[start..<end], as: UTF16.self), start: start, end: position))
+                texts.append(String(decoding: units[start..<end], as: UTF16.self))
+                starts.append(start); ends.append(position)
                 start = position
             } else { position += 1 }
         }
-        if start < units.count || lines.isEmpty { lines.append(.init(text: String(decoding: units[start...], as: UTF16.self), start: start, end: units.count)) }
-        if lines.contains(where: { $0.end - $0.start > limits.maximumLineUTF16 }) {
-            return .init(blocks: [], sourceUTF16Length: total, warnings: [], limitation: "An exceptionally long line exceeds the preview budget. Choose an excerpt explicitly; your source stays intact.")
+        if start < units.count || texts.isEmpty {
+            texts.append(String(decoding: units[start...], as: UTF16.self))
+            starts.append(start); ends.append(units.count)
         }
-        var blocks: [MarkdownBlock] = [], warnings: [String] = [], occurrences: [String: Int] = [:]
+        return (texts, starts, ends)
+    }
+
+    /// `frontMatter` is true only for a parse that begins at the document
+    /// start; incremental window parses mid-document must not form it.
+    static func parseDetailed(_ source: String, limits: MarkdownLimits = .init(), frontMatter: Bool = true) -> ParsedDocumentRecord {
+        let total = source.utf16.count
+        guard (1...2 * 1024 * 1024).contains(limits.maximumUTF8Bytes),
+              (1...128 * 1024).contains(limits.maximumLineUTF16),
+              (1...20_000).contains(limits.maximumBlocks), source.utf8.count <= limits.maximumUTF8Bytes else {
+            return .init(blocks: [], sourceUTF16Length: total, lineStarts: [], lineCount: 0, limitation: "This note exceeds the current preview budget. Source editing is unchanged. You can explicitly request an excerpt.")
+        }
+        let split = splitLines(source)
+        let texts = split.texts, starts = split.starts, ends = split.ends
+        if texts.contains(where: { $0.utf16.count > limits.maximumLineUTF16 }) {
+            return .init(blocks: [], sourceUTF16Length: total, lineStarts: starts, lineCount: texts.count, limitation: "An exceptionally long line exceeds the preview budget. Choose an excerpt explicitly; your source stays intact.")
+        }
+        var records: [ParsedBlockRecord] = [], occurrences: [String: Int] = [:]
         var index = 0
-        func span(_ first: Int, _ last: Int) -> SourceSpan { .init(location: lines[first].start, length: lines[last].end - lines[first].start) }
-        func add(_ kind: MarkdownBlockKind, from first: Int, through last: Int) {
-            let range = span(first, last)
-            let bytes = String(decoding: units[range.location..<range.end], as: UTF16.self)
+        func add(_ kind: MarkdownBlockKind, from first: Int, through last: Int, warnings: [String] = []) {
+            let location = starts[first], length = ends[last] - starts[first]
+            let bytes = String(decoding: source.utf16.dropFirst(location).prefix(length), as: UTF16.self)
             // Content+occurrence identity preserves unchanged block views when
             // earlier text moves their source offsets. It isn't a note identity.
             let digest = ContentDigest.sha256(Data(bytes.utf8))
             let occurrence = occurrences[digest, default: 0]; occurrences[digest] = occurrence + 1
-            blocks.append(.init(id: String(digest.prefix(24)) + "-\(occurrence)", source: range, kind: kind))
+            let block = MarkdownBlock(id: String(digest.prefix(24)) + "-\(occurrence)", source: .init(location: location, length: length), kind: kind)
+            records.append(.init(block: block, digest: digest, firstLine: first, lastLine: last, warnings: warnings))
         }
-        if let first = lines.first,
-           first.trim.trimmingCharacters(in: CharacterSet(charactersIn: "\u{FEFF}")) == "---",
-           let end = (1..<min(lines.count, 129)).first(where: { ["---", "..."].contains(lines[$0].trim) }) {
-            add(.metadata(lines[0...end].map(\.text).joined(separator: "\n")), from: 0, through: end)
+        if frontMatter, let first = texts.first,
+           first.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "\u{FEFF}")) == "---",
+           let end = (1..<min(texts.count, 129)).first(where: { ["---", "..."].contains(texts[$0].trimmingCharacters(in: .whitespaces)) }) {
+            add(.metadata(texts[0...end].joined(separator: "\n")), from: 0, through: end)
             index = end + 1
         }
-        while index < lines.count {
-            if Task<Never, Never>.isCancelled { return .init(blocks: [], sourceUTF16Length: total, warnings: [], limitation: "Preview generation was cancelled.") }
-            if blocks.count >= limits.maximumBlocks {
-                return .init(blocks: [], sourceUTF16Length: total, warnings: [], limitation: "This note has too many preview blocks for the current renderer. Source editing is unchanged.")
+        while index < texts.count {
+            if Task<Never, Never>.isCancelled {
+                return .init(blocks: [], sourceUTF16Length: total, lineStarts: starts, lineCount: texts.count, limitation: "Preview generation was cancelled.")
             }
-            let line = lines[index]
-            if line.trim.isEmpty { index += 1; continue }
-            if let fence = openingFence(line.text) {
+            if records.count >= limits.maximumBlocks {
+                return .init(blocks: [], sourceUTF16Length: total, lineStarts: starts, lineCount: texts.count, limitation: "This note has too many preview blocks for the current renderer. Source editing is unchanged.")
+            }
+            let text = texts[index]
+            let trim = text.trimmingCharacters(in: .whitespaces)
+            if trim.isEmpty { index += 1; continue }
+            if let fence = openingFence(text) {
                 let first = index
                 index += 1
                 var contents: [String] = []
-                while index < lines.count && !closesFence(lines[index].trim, marker: fence.marker, count: fence.count) {
-                    contents.append(lines[index].text); index += 1
+                while index < texts.count && !closesFence(texts[index].trimmingCharacters(in: .whitespaces), marker: fence.marker, count: fence.count) {
+                    contents.append(texts[index]); index += 1
                 }
-                let closed = index < lines.count
+                let closed = index < texts.count
                 let last = closed ? index : max(first, index - 1)
-                add(.code(language: fence.language, text: contents.joined(separator: "\n")), from: first, through: last)
-                if closed { index += 1 } else { warnings.append("An unclosed code fence is shown as code through the end of the note.") }
+                add(.code(language: fence.language, text: contents.joined(separator: "\n")), from: first, through: last,
+                    warnings: closed ? [] : ["An unclosed code fence is shown as code through the end of the note."])
+                if closed { index += 1 }
                 continue
             }
-            if let heading = heading(line.trim) {
+            if let heading = heading(trim) {
                 add(.heading(level: heading.level, text: MarkdownInlineParser.parse(heading.text)), from: index, through: index)
                 index += 1; continue
             }
-            if index + 1 < lines.count, let level = setextLevel(lines[index+1].trim) {
-                add(.heading(level: level, text: MarkdownInlineParser.parse(line.text)), from: index, through: index + 1)
+            if index + 1 < texts.count, let level = setextLevel(texts[index+1].trimmingCharacters(in: .whitespaces)) {
+                add(.heading(level: level, text: MarkdownInlineParser.parse(text)), from: index, through: index + 1)
                 index += 2; continue
             }
-            if isRule(line.trim) { add(.rule, from: index, through: index); index += 1; continue }
-            if index + 1 < lines.count, line.text.contains("|"), let align = tableAlignment(lines[index+1].text) {
+            if isRule(trim) { add(.rule, from: index, through: index); index += 1; continue }
+            if index + 1 < texts.count, text.contains("|"), let align = tableAlignment(texts[index+1]) {
                 let first = index
-                let headers = tableCells(line.text)
+                let headers = tableCells(text)
                 guard headers.count == align.count, headers.count <= 12 else {
-                    add(.paragraph(MarkdownInlineParser.parse(line.text)), from: index, through: index); index += 1; continue
+                    add(.paragraph(MarkdownInlineParser.parse(text)), from: index, through: index); index += 1; continue
                 }
                 index += 2
                 var rows: [[[MarkdownInline]]] = []
-                while index < lines.count, !lines[index].trim.isEmpty, lines[index].text.contains("|"), rows.count < 200 {
-                    let cells = tableCells(lines[index].text)
+                while index < texts.count, !texts[index].trimmingCharacters(in: .whitespaces).isEmpty, texts[index].contains("|"), rows.count < 200 {
+                    let cells = tableCells(texts[index])
                     var row = Array(cells.prefix(headers.count))
                     while row.count < headers.count { row.append("") }
                     rows.append(row.map(MarkdownInlineParser.parse)); index += 1
                 }
-                add(.table(headers: headers.map(MarkdownInlineParser.parse), rows: rows, alignment: align), from: first, through: index - 1)
-                if rows.count == 200 { warnings.append("A table exceeded 200 rendered rows; remaining lines are shown as ordinary text.") }
+                add(.table(headers: headers.map(MarkdownInlineParser.parse), rows: rows, alignment: align), from: first, through: index - 1,
+                    warnings: rows.count == 200 ? ["A table exceeded 200 rendered rows; remaining lines are shown as ordinary text."] : [])
                 continue
             }
-            if line.trim.hasPrefix(">") {
+            if trim.hasPrefix(">") {
                 let first = index
                 var contents: [String] = []
-                while index < lines.count, lines[index].trim.hasPrefix(">") {
-                    var value = String(lines[index].trim.dropFirst())
+                while index < texts.count, texts[index].trimmingCharacters(in: .whitespaces).hasPrefix(">") {
+                    var value = String(texts[index].trimmingCharacters(in: .whitespaces).dropFirst())
                     if value.hasPrefix(" ") { value.removeFirst() }
                     contents.append(value); index += 1
                 }
                 add(.quote(MarkdownInlineParser.parse(contents.joined(separator: "\n"))), from: first, through: index - 1); continue
             }
-            if let item = listItem(line.text) {
+            if let item = listItem(text) {
                 add(.listItem(depth: item.depth, number: item.number, checked: item.checked, text: MarkdownInlineParser.parse(item.text)), from: index, through: index)
                 index += 1; continue
             }
-            if line.trim.hasPrefix("<"), !line.trim.hasPrefix("<http") {
+            if trim.hasPrefix("<"), !trim.hasPrefix("<http") {
                 let first = index
-                var contents = [line.text]; index += 1
-                while index < lines.count, !lines[index].trim.isEmpty { contents.append(lines[index].text); index += 1 }
-                add(.literalHTML(contents.joined(separator: "\n")), from: first, through: index - 1)
-                warnings.append("Raw HTML is displayed literally; it cannot execute or load resources.")
+                var contents = [text]; index += 1
+                while index < texts.count, !texts[index].trimmingCharacters(in: .whitespaces).isEmpty { contents.append(texts[index]); index += 1 }
+                add(.literalHTML(contents.joined(separator: "\n")), from: first, through: index - 1,
+                    warnings: ["Raw HTML is displayed literally; it cannot execute or load resources."])
                 continue
             }
             let first = index
-            var paragraph = [line.text]; index += 1
-            while index < lines.count {
-                let next = lines[index]
-                if next.trim.isEmpty || openingFence(next.text) != nil || heading(next.trim) != nil || isRule(next.trim) || next.trim.hasPrefix(">") || listItem(next.text) != nil || next.trim.hasPrefix("<") { break }
-                if index + 1 < lines.count, tableAlignment(lines[index+1].text) != nil, next.text.contains("|") { break }
-                if index + 1 < lines.count, setextLevel(lines[index+1].trim) != nil { break }
-                paragraph.append(next.text); index += 1
+            var paragraph = [text]; index += 1
+            while index < texts.count {
+                let next = texts[index]
+                let nextTrim = next.trimmingCharacters(in: .whitespaces)
+                if nextTrim.isEmpty || openingFence(next) != nil || heading(nextTrim) != nil || isRule(nextTrim) || nextTrim.hasPrefix(">") || listItem(next) != nil || nextTrim.hasPrefix("<") { break }
+                if index + 1 < texts.count, tableAlignment(texts[index+1]) != nil, next.contains("|") { break }
+                if index + 1 < texts.count, setextLevel(texts[index+1].trimmingCharacters(in: .whitespaces)) != nil { break }
+                paragraph.append(next); index += 1
             }
             add(.paragraph(MarkdownInlineParser.parse(paragraph.joined(separator: "\n"))), from: first, through: index - 1)
         }
-        return .init(blocks: blocks, sourceUTF16Length: total, warnings: Array(Set(warnings)).sorted(), limitation: nil)
+        return .init(blocks: records, sourceUTF16Length: total, lineStarts: starts, lineCount: texts.count, limitation: nil)
     }
 
     /// Explicitly requested excerpt; never automatically substitutes a truncated
@@ -143,7 +191,7 @@ public enum MarkdownParser {
         }
         return result
     }
-    private static func openingFence(_ text: String) -> (marker: Character, count: Int, language: String)? {
+    static func openingFence(_ text: String) -> (marker: Character, count: Int, language: String)? {
         let indentation = text.prefix(while: { $0 == " " }).count
         guard indentation <= 3 else { return nil }
         let value = text.dropFirst(indentation)
@@ -154,7 +202,7 @@ public enum MarkdownParser {
         if first == "`" && info.contains("`") { return nil }
         return (first, count, String(info.prefix(40)))
     }
-    private static func closesFence(_ text: String, marker: Character, count: Int) -> Bool {
+    static func closesFence(_ text: String, marker: Character, count: Int) -> Bool {
         let run = text.prefix(while: { $0 == marker }).count
         return run >= count && text.dropFirst(run).trimmingCharacters(in: .whitespaces).isEmpty
     }
@@ -197,7 +245,7 @@ public enum MarkdownParser {
         var cells: [String] = [], current = "", escaped = false, code = false
         for c in value {
             if escaped { current.append(c); escaped = false; continue }
-            if c == "\\" { current.append(c); escaped = true; continue }
+            if c == "\\" { escaped = true; continue }
             if c == "`" { code.toggle() }
             if c == "|" && !code { cells.append(current.trimmingCharacters(in: .whitespaces)); current = "" }
             else { current.append(c) }

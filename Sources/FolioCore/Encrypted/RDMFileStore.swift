@@ -73,6 +73,14 @@ public actor RDMFileStore {
         try requireOpen()
         return try EncryptedWorkingIndex(projectID: projectID)
     }
+    /// Creates the persistent encrypted working store for this open session.
+    /// The session keeps the project advisory lock; the working store reuses
+    /// that ownership instead of taking a second lock.
+    public func makeWorkingStore(limits: RDMWorkingLimits = .init()) throws -> RDMWorkingStore {
+        try requireOpen()
+        return try RDMWorkingStore(parent: fileURL.deletingLastPathComponent(),
+                                   baseName: fileURL.lastPathComponent, keys: keys, limits: limits)
+    }
     public func currentProject() throws -> RDMProjectPayload { try requireOpen(); return project }
     public func currentSnapshotID() throws -> String { try requireOpen(); return snapshotID }
     public func lock() { keys.lock(); close() }

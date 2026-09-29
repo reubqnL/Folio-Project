@@ -52,8 +52,15 @@ struct NotesWorkspaceView: View {
             Divider()
             HStack {
                 if session.isOpening { ProgressView().controlSize(.small); Text("Opening project…") }
-                else { Text(session.workspaceSection == .roadmap ? session.planning.status : session.selectedDocument?.status ?? "Choose a local project folder") }
+                else {
+                    Text(session.workspaceSection == .roadmap ? session.planning.status : session.selectedDocument?.status ?? "Choose a local project folder")
+                        .help(session.selectedDocument?.statusExplanation ?? "")
+                }
                 Spacer()
+                if session.selectedDocument != nil {
+                    Text(VaultRemoteState.unavailable.label)
+                        .help(VaultRemoteState.unavailable.explanation)
+                }
                 Text("Development build · use copies").foregroundStyle(FolioStyle.gold)
             }
             .font(.caption).padding(.horizontal, 16).padding(.vertical, 8)
@@ -94,6 +101,7 @@ struct NotesWorkspaceView: View {
                 Button { Task { await session.refreshProject() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                     .disabled(session.project == nil || session.isRefreshing)
                 Button { Task { await session.recoverProject() } } label: { Label("Recovery", systemImage: "clock.arrow.circlepath") }
+                Button { session.runCommand(.repairLinks) } label: { Label("Repair Links", systemImage: "wrench") }
                     .disabled(session.project == nil)
                 Button { session.creationSeed = nil; session.showingNewNote = true } label: { Label("New Note", systemImage: "square.and.pencil") }
                     .disabled(!session.canCreateNote)

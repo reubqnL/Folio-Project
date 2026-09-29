@@ -18,7 +18,7 @@ let package = Package(
         ]),
         .systemLibrary(name: "CSQLite", providers: [.apt(["libsqlite3-dev"])]),
         .target(name: "CArgon2", sources: ["src/argon2.c", "src/core.c", "src/ref.c", "src/encoding.c", "src/blake2/blake2b.c"], publicHeadersPath: "include", cSettings: [.define("ARGON2_NO_THREADS"), .headerSearchPath("src")]),
-        .target(name: "FolioRDMPrimitives", dependencies: ["CArgon2"], publicHeadersPath: "include", linkerSettings: [
+        .target(name: "FolioRDMPrimitives", dependencies: ["CArgon2"], publicHeadersPath: "include", cSettings: [.headerSearchPath("vendor/libarchive")], linkerSettings: [
             .linkedLibrary("archive"),
             .linkedLibrary("z", .when(platforms: [.linux])),
             .linkedLibrary("lzma", .when(platforms: [.linux])),
@@ -31,6 +31,7 @@ let package = Package(
         .executableTarget(name: "FolioPlanningProbe", dependencies: ["FolioCore"]),
         .executableTarget(name: "FolioCaptureProbe", dependencies: ["FolioCore"]),
         .executableTarget(name: "FolioSpeechProbe", dependencies: ["FolioCore"]),
+        .executableTarget(name: "FolioBenchmarkProbe", dependencies: ["FolioCore"]),
         .testTarget(name: "FolioCoreTests", dependencies: ["FolioCore"])
     ]
 )

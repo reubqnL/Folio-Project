@@ -1,6 +1,6 @@
 # Folio — implementation plan after your 50 answers
 
-**Current stage: Increment 07 — encrypted `.rdm` foundation · Estimated completion: 41% · Owner testing: on hold · Release: blocked**
+**Current stage: Increment 08 — persistent encrypted working storage · Estimated completion: 42% · Owner testing: on hold · Release: blocked**
 
 Your personal answers are the product authority. They override conflicting defaults in the September 2026 baseline. The original baseline PDF, roadmap workbook and browser concept remain reference snapshots, not the current implementation or proof of working native features.
 
@@ -34,21 +34,26 @@ Your personal answers are the product authority. They override conflicting defau
 | Android later | **Read-only for this roadmap.** Editing would need a separately approved future scope. |
 | Release authority | **No exceptions to defined release blockers.** Missing or unrun evidence is blocking, not a pass. |
 
-## 2. Current build — Increment 07
+## 2. Current build — Increment 12
 
-The encrypted project foundation is now implemented as a separate, bounded subsystem:
+The encrypted project foundation is now implemented as a separate, bounded subsystem, and Increment 08 adds persistent encrypted working storage on top of it:
 
 - Pinned Argon2id v1.3 source/provenance, bounded passphrase KDF and protected secret handle.
 - AES-256-GCM/HKDF adapters, domain-separated keys/AAD, fresh revisions/nonces and recovery/passphrase slots.
 - Strict ZIP64 transport allow-list, encrypted manifest/object records, canonical schema validation and no filesystem extraction.
 - Atomic encrypted `.rdm` checkpoint store with parent lineage, stale external-head refusal and lock ownership.
 - Recovery/passphrase open, rewrap semantics and strict malformed/tampered/transplant/resource tests.
+- Increment 08: persistent encrypted working storage — chained two-slot draft records with fail-closed stale classification and reviewed resolution, an encrypted derived-index cache bound to its archive snapshot, session draft APIs and native draft staging/restore/review wiring.
+- Increment 09: honest durability acknowledgement (N01) — the explicit seven-state `VaultDurability` model with barrier-scoped labels, `VaultCheckpointState`/`VaultRemoteState` separation axes, documented 250/500 ms coalescing measurements, and native status surfaces that cannot display queued or timed work as saved.
+- Increment 10: incremental Markdown reparse (N02) — `MarkdownReparseSession` splices only the changed region of the reading preview with parse-equal results and stable untouched block identities, with boundary proofs around the splice and a full-parse fallback whenever equivalence cannot be proven.
+- Increment 11: compact link repair (N02) — `NoteLinkRepair` lists broken and ambiguous note links at exact source spans and applies one confirmed replacement at a time (digest-bound, form/anchor preserving, refused when the rewrite would break link syntax); the original link is kept until the replacement is confirmed.
+- Increment 12: large-file/long-line benchmarks (N02) — deterministic `BenchmarkCorpora` sized against the parse budgets plus `FolioBenchmarkProbe` measuring parse, per-keystroke incremental reparse, link scan and excerpt; timings are recorded evidence for the `inputAndLargeDocumentCorrectness` gate and are never asserted.
 
-The focused encrypted suite has **52 passing tests**, including hostile-input, atomic-rebuild and encrypted-session coverage. Primitive known-answer tests include AES-GCM, HKDF and Argon2id. The full regression/package evidence remains bounded Linux evidence pending Mac validation.
+The focused encrypted suite has **56 passing tests** from Increment 07 (hostile-input, atomic-rebuild and encrypted-session coverage; primitive known-answer tests include AES-GCM, HKDF and Argon2id), plus **23 working-store/session tests (Increment 08) and 10 durability-model tests (Increment 09) that must still be executed** in a Swift-capable environment before counting as evidence. The full regression/package evidence remains bounded Linux evidence pending Mac validation.
 
 ### Non-completion boundary
 
-This is not yet encrypted workspace integration or a security audit. Mac CryptoKit/APFS behavior, Keychain slots, encrypted working/index/cache/WAL/temp objects, migrations, fuzzing, power-loss tests, independent crypto review and native privacy UI remain required. Current plain vaults and search caches are still plaintext.
+This is not yet encrypted workspace integration or a security audit. Mac CryptoKit/APFS behavior, Keychain slots, on-demand encrypted object caching/WAL and preview/diagnostic boundaries, migrations, fuzzing, power-loss tests, independent crypto review and native privacy UI completion remain required. Current plain vaults and search caches are still plaintext.
 
 ## 3. Ordered native build backlog
 
@@ -65,7 +70,7 @@ These are implementation increments, not promises that a feature exists. Exit ev
 | N06 | Encrypted `.rdm` projects | Versioned bounded parser; reviewed cryptographic libraries; authenticated immutable objects/manifests; safe nonces and key lifecycle; encrypted working store and caches; independent atomic archive checkpoints; recovery/enrolment flows; corruption, malicious-header, plaintext-residue, free-space and crash tests. |
 | N07 | Mac release and distribution | Native `.pkg` pipeline; correct application and installer identities; notarization/stapling; installer/uninstaller review; dependency provenance; safe update rollback and migrations; accessibility and performance evidence; independent security review and closure of blockers. |
 
-### N01 durability contract to implement next
+### N01 durability contract — model implemented in Increment 09
 
 1. **Not created:** cancelling the title/location sheet creates no file and no hidden draft on disk.
 2. **Editing / saving:** the UI may show pending work, but cannot call it durable simply because a timer fired or a write was queued.
@@ -76,6 +81,8 @@ These are implementation increments, not promises that a feature exists. Exit ev
 7. **Failure:** permission loss, full disk, cancellation and interrupted migration produce actionable errors without overwriting the last known good state.
 
 The 250 ms value is a coalescing target, not a promise that suspended hardware or failing storage can acknowledge every edit in 250 ms. A bounded maximum delay, filesystem semantics and the displayed acknowledgement must be measured and documented.
+
+**Status:** the seven states are implemented as `VaultDurability` / `VaultCheckpointState` / `VaultRemoteState` with honest labels and help text; the coalescing bounds (250 ms target, 500 ms bounded maximum) are named measurements in `SaveCoalescing`; the filesystem semantics and label claims are documented in `docs/architecture/STORAGE-CONTRACT.md`. Verification of the barrier under real fault/power-loss conditions remains an exit gate (N00/N07 evidence), not a claim.
 
 ## 4. Later native work and platform holds
 

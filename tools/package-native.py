@@ -1,4 +1,4 @@
-"""Package Increment 07 with narrowly scoped, real verification evidence."""
+"""Package Increment 12 with narrowly scoped, real verification evidence."""
 from pathlib import Path
 import hashlib
 import json
@@ -66,7 +66,7 @@ assert 'AVAudioFile(' not in speech_source and 'SFSpeechRecognizer(' not in spee
 assert 'CaptureInputSequenceProvider(' not in speech_source and 'AnalyzerInputConverter(' not in speech_source
 
 unit_count = sum(len(re.findall(r'func test\w+\(', p.read_text())) for p in (ROOT / 'Tests').rglob('*.swift'))
-assert unit_count == 333
+assert unit_count == 421
 # Evidence/ holds generated test output and is intentionally not committed
 # (see .gitignore). Recreate it from the current source when it is absent, so
 # the assertions below always read results produced by this checkout.
@@ -78,7 +78,7 @@ if any(not (ROOT / 'Evidence' / name).is_file() for name in REQUIRED_EVIDENCE):
 
 for name in ['core-tests.log', 'core-tests-release.log']:
     text = (ROOT / 'Evidence' / name).read_text()
-    assert re.search(r'Executed 333 tests, with 0 failures', text)
+    assert re.search(r'Executed 421 tests, with 0 failures', text)
     assert "Test Suite 'All tests' passed" in text
     assert 'warning:' not in text and 'error:' not in text
 processes = json.loads((ROOT / 'Evidence/process-crash-tests.json').read_text())
@@ -104,7 +104,7 @@ audio = json.loads((ROOT / 'Evidence/audio-ring-sanitizers.json').read_text())
 assert audio['status'] == 'PASS' and audio['checks'] == 6 and audio['accepted_threaded_frames'] == 100000
 progress = json.loads((ROOT / 'docs/progress/progress.json').read_text())
 assert sum(a['weight'] for a in progress['areas']) == 100
-assert sum(a['credited_points'] for a in progress['areas']) == progress['estimated_percent'] == 41
+assert sum(a['credited_points'] for a in progress['areas']) == progress['estimated_percent'] == 43
 assert all(0 <= a['credited_points'] <= a['weight'] for a in progress['areas'])
 
 # Only remove our obsolete local build/scratch outputs, never user vaults.
@@ -130,14 +130,14 @@ inspection = {
 }
 (ROOT / 'Evidence/source-inspection.json').write_text(json.dumps(inspection, indent=2))
 verification = {
-    'increment': '07',
-    'status': 'Increment 07 development source; encrypted .rdm and memory-only working-index foundations tested; estimated scope completion 41%; native/security/release gates remain blocked',
+    'increment': '12',
+    'status': 'Increment 12 development source; encrypted .rdm foundation with persistent encrypted working storage and the honest durability acknowledgement model, incremental Markdown reparse, compact link repair and the large-document benchmark harness; estimated scope completion 46%; native/security/release gates remain blocked',
     'personal_answers': {'total': 50, 'ui_ux': 25, 'engineering': 25},
     'core_compiled_targets': ['FolioCore', 'FolioFileIO', 'CSQLite', 'FolioStorageProbe', 'FolioReadingProbe', 'FolioPlanningProbe', 'FolioCaptureProbe', 'FolioSpeechProbe', 'CArgon2', 'FolioRDMPrimitives'],
     'core_compilation_platform': 'Linux x86_64 / Swift 6.0.3',
     'distinct_unit_tests': unit_count,
-    'debug_tests': 'PASS — 333 tests, 0 failures',
-    'release_optimised_tests': 'PASS — same 333 tests, 0 failures',
+    'debug_tests': 'PASS — 421 tests, 0 failures',
+    'release_optimised_tests': 'PASS — same 421 tests, 0 failures',
     'process_storage_checks': 'PASS — 13 checks, including real SIGKILL',
     'reading_workflow_checks': 'PASS — 11 checks with 1,000 generated note fixtures',
     'planning_graph_workflow': 'PASS — 10 generated-data checks',
@@ -149,8 +149,9 @@ verification = {
     'native_capture_editor_apply_undo_and_rollback': 'NOT RUN',
     'microphone_and_apple_speech': 'Native source added; SDK/TCC/device/converter/ASR runtime NOT RUN',
     'rdm_crypto_archive_checkpoint': 'PASS — 43 focused primitive/archive/file/hostile-input tests; independent review and Mac parity NOT RUN',
-    'rdm_encrypted_working_store_index': 'PASS — 8 focused memory-only bounded derived-index and atomic-rebuild tests; persistent encrypted index NOT IMPLEMENTED',
-    'encrypted_project_session': 'PASS — 5 session-boundary tests for memory-only search, recovery reopen, checkpoint/index ordering, failed checkpoint preservation and lock release',
+    'rdm_encrypted_working_store_index': 'PASS — 8 bounded derived-index tests and 18 persistent working-store tests (chained draft records, stale classification, reviewed resolution, plaintext canaries, encrypted index cache)',
+    'encrypted_project_session': 'PASS — 10 session-boundary tests covering memory search, recovery reopen, checkpoint/index ordering, failed checkpoint preservation, lock release, draft survive-close/reopen, discard-to-clear, stale-block until resolution and cache fallback',
+    'vault_durability_acknowledgement': 'PASS — 10 N01 durability-model tests (seven-state resolution and precedence, label honesty, scoped explanations, checkpoint/sync separation, measured 250/500 ms coalescing bounds)',
     'speech_workflow': 'PASS — 12 synthetic PCM/transcript/handoff cases; no microphone or ASR',
     'audio_ring_sanitizers': 'PASS — 6 ASan/UBSan checks; 100000 generated threaded frames',
     'hostile_input_and_rebuild_coverage': 'PASS — deterministic archive mutation/random ZIP/bounds tests and failed-rebuild preservation',
@@ -166,8 +167,8 @@ verification = {
     'windows_evaluation_permitted': False,
     'android_scope': 'read-only',
     'native_app_or_installer_built': False,
-    'current_storage': 'Plaintext Markdown, roadmap sidecar, recovery journals and outside-vault search cache',
-    'unimplemented_or_unverified': ['native planning/Metal/UI execution', '100k-note/native-performance gates', 'full Markdown conformance and reconciliation/recovery refinements', 'Mac preview/split/IME/undo/accessibility runtime', 'live Foundation Models and Apple speech/microphone SDK/runtime/quality/resource checks', 'Mac CryptoKit/APFS/encrypted working store and independent crypto review', 'encrypted working store/index and Mac CryptoKit/APFS parity', 'collaboration', 'installer/updater/security audit'],
+    'current_storage': 'Plaintext Markdown, roadmap sidecar, recovery journals and outside-vault search cache; encrypted .rdm projects keep unsaved drafts and the derived-index cache in sealed local working records',
+    'unimplemented_or_unverified': ['native planning/Metal/UI execution', '100k-note/native-performance gates', 'full Markdown conformance and reconciliation/recovery refinements', 'Mac preview/split/IME/undo/accessibility runtime', 'live Foundation Models and Apple speech/microphone SDK/runtime/quality/resource checks', 'Mac CryptoKit/APFS parity, encrypted-working-store fault/power-loss coverage and independent crypto review', 'collaboration', 'installer/updater/security audit'],
     'approved_logo_sha256': LOGO
 }
 (ROOT / 'Verification.json').write_text(json.dumps(verification, indent=2))
@@ -201,7 +202,7 @@ for relative in BUNDLED_FILES:
     assert path.is_file(), path
     files.append((path, 'Folio/' + relative))
 manifest = {
-    'bundle': 'Folio native source — Increment 07',
+    'bundle': 'Folio native source — Increment 12',
     'status': verification['status'],
     'files': [{'path': name, 'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()} for path, name in files]
 }

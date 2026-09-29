@@ -28,13 +28,20 @@ final class OpenNoteDocument: Identifiable {
         id = snapshot.note.id; baseline = snapshot; text = snapshot.markdown; lastWriteConfirmed = justWritten
     }
     var isDirty: Bool { editGeneration != committedGeneration }
-    var status: String {
-        if conflict != nil { return "Conflict — local text preserved" }
-        if let failure { return "Not saved: " + failure }
-        if isSaving { return "Writing locally…" }
-        if isDirty { return "Changes waiting to save…" }
-        return lastWriteConfirmed ? "Written locally" : "Loaded from disk"
+    /// N01 durability state derived from the document flags. The status line
+    /// shows only this model's labels so queued or timed work can never be
+    /// displayed as saved.
+    var durability: VaultDurability {
+        VaultDurability.resolve(
+            conflict: conflict != nil,
+            failure: failure,
+            isSaving: isSaving,
+            isDirty: isDirty,
+            lastWriteConfirmed: lastWriteConfirmed
+        )
     }
+    var status: String { durability.label }
+    var statusExplanation: String { durability.explanation }
     func reload(_ snapshot: VaultSnapshot) {
         baseline = snapshot; text = snapshot.markdown
         editGeneration += 1; committedGeneration = editGeneration

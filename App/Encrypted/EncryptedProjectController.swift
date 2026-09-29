@@ -39,9 +39,22 @@ final class EncryptedProjectController {
     var pendingRecoveryCode: String?
     var errorMessage: String?
     var notice: String?
+    var needsWorkingReview = false
+    /// True while a debounced working-copy write is scheduled or in flight.
+    var isStagingDraft = false
+    /// True when the current draft text is confirmed in the encrypted working
+    /// copy (or was restored from it). Cleared by every further edit.
+    var draftStagedConfirmed = false
+    /// Set when an approved checkpoint write failed; cleared on success.
+    var checkpointFailure: String?
+    /// Generation counter so a superseded staging write cannot confirm or
+    /// clear state belonging to a newer edit.
+    @ObservationIgnored private var draftStageGeneration = 0
 
     @ObservationIgnored private var session: RDMProjectSession?
     @ObservationIgnored private var pendingCreationProject: RDMProjectPayload?
+    @ObservationIgnored private var draftNoteID: UUID?
+    @ObservationIgnored private var draftStageTask: Task<Void, Never>?
 
     var isUnlocked: Bool { phase == .unlocked || phase == .recoveryReview }
     var hasOpenSession: Bool { session != nil }
@@ -50,38 +63,144 @@ final class EncryptedProjectController {
     var hasDraft: Bool { isNewDraft || editingNoteID != nil }
     var displayName: String { project?.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? "Encrypted project" }
 
+    /// Initial placeholder path for a new draft; empty content with this path
+    /// is an untouched draft with nothing to lose.
+    static let defaultDraftPath = "Notes/New note.md"
+
+    /// True when the open draft differs from the archived note (or holds
+    /// content of its own). An untouched new draft (default path, empty text)
+    /// has nothing to lose and is not described as unsaved work.
+    private var draftHasUnsavedChanges: Bool {
+        guard hasDraft else { return false }
+        if isNewDraft { return !draftMarkdown.isEmpty || draftPath != Self.defaultDraftPath }
+        return draftMarkdown != editingNote?.markdown || draftPath != editingNote?.path
+    }
+
+    /// N01 axes for the encrypted workspace: unsaved-text durability in the
+    /// working copy is displayed separately from the archive checkpoint, and
+    /// neither is conflated with sync (which does not exist in this build).
+    var draftCopyLabel: String {
+        if !hasDraft { return "No unsaved draft" }
+        if isStagingDraft { return "Unsaved text — write pending" }
+        if !draftHasUnsavedChanges { return "No unsaved changes" }
+        return draftStagedConfirmed
+            ? "Unsaved text durable in the working copy"
+            : "Unsaved text — editor only"
+    }
+
+    var draftCopyExplanation: String {
+        switch draftCopyLabel {
+        case "No unsaved draft":
+            "The draft editor is closed. The authenticated archive is the only copy."
+        case "Unsaved text — write pending":
+            "Your unsaved text is being written to the encrypted local working copy (250 ms coalescing). It is not confirmed durable yet."
+        case "No unsaved changes":
+            "The draft matches the archived note; there is nothing unsaved to lose."
+        case "Unsaved text durable in the working copy":
+            "Your unsaved text is confirmed in the encrypted local working copy (acknowledged after the storage barrier). It joins the archive only when you approve a checkpoint."
+        default:
+            "Your unsaved text is not yet confirmed in the encrypted local working copy. Keep Folio open so the next edit can retry the write; approving a checkpoint writes it into the archive."
+        }
+    }
+
+    var checkpointState: VaultCheckpointState {
+        guard isUnlocked, session != nil else { return .noArchive }
+        if let checkpointFailure, hasDraft, draftHasUnsavedChanges { return .failed(checkpointFailure) }
+        return draftHasUnsavedChanges ? .draftOutstanding : .current
+    }
+
+    var durabilitySummary: String {
+        "\(draftCopyLabel) · \(checkpointState.label) · \(VaultRemoteState.unavailable.label)"
+    }
+
+    var durabilityExplanation: String {
+        draftCopyExplanation + "\n\n" + checkpointState.explanation + "\n\n" + VaultRemoteState.unavailable.explanation
+    }
+
     func beginNewNote() {
         guard isUnlocked else { return }
         editingNoteID = nil
         isNewDraft = true
-        draftPath = "Notes/New note.md"
+        draftNoteID = UUID()
+        draftPath = Self.defaultDraftPath
         draftMarkdown = ""
+        isStagingDraft = false
+        draftStagedConfirmed = false
+        checkpointFailure = nil
         errorMessage = nil
-        notice = "New encrypted note is a draft. Nothing is written until you choose Write encrypted checkpoint."
+        notice = "New encrypted note is a draft. It stays in the encrypted local working copy until you choose Write encrypted checkpoint."
     }
 
     func beginEditingSelectedNote() {
         guard isUnlocked, let note = selectedNote else { return }
         editingNoteID = note.id
         isNewDraft = false
+        draftNoteID = note.id
         draftPath = note.path
         draftMarkdown = note.markdown
+        isStagingDraft = false
+        draftStagedConfirmed = false
+        checkpointFailure = nil
         errorMessage = nil
-        notice = "Draft only. Nothing is written until you choose Write encrypted checkpoint."
+        notice = "Draft only. It stays in the encrypted local working copy until you choose Write encrypted checkpoint."
     }
 
     func cancelEditing() {
+        let discarded = editingNoteID ?? draftNoteID
+        draftStageTask?.cancel()
+        draftStageTask = nil
+        isStagingDraft = false
+        draftStagedConfirmed = false
+        checkpointFailure = nil
         editingNoteID = nil
         isNewDraft = false
+        draftNoteID = nil
         draftPath = ""
         draftMarkdown = ""
         notice = "Encrypted draft discarded; the authenticated project is unchanged."
+        if let discarded, let session {
+            Task { [weak self] in
+                do { try await session.discardDraft(id: discarded) }
+                catch { self?.notice = "The draft was cleared here, but its local working copy needs review before it can be removed." }
+            }
+        }
+    }
+
+    /// Unsaved drafts are debounced into the encrypted local working copy so a
+    /// crash cannot silently lose in-progress text. This is local durability,
+    /// not a checkpoint: the authenticated archive changes only on approval.
+    func draftTextDidChange() {
+        guard isUnlocked, hasDraft, let session, let draftID = editingNoteID ?? draftNoteID else { return }
+        draftStageTask?.cancel()
+        let path = draftPath, markdown = draftMarkdown
+        let stamped = Int64(Date().timeIntervalSince1970 * 1000)
+        // This edit is only in the editor until the staged write is confirmed.
+        draftStagedConfirmed = false
+        isStagingDraft = true
+        draftStageGeneration += 1
+        let generation = draftStageGeneration
+        draftStageTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled, let self, self.draftStageGeneration == generation else { return }
+            defer {
+                if self.draftStageGeneration == generation { self.isStagingDraft = false }
+            }
+            do {
+                try await session.stageDraft(.init(id: draftID, path: path, markdown: markdown, updatedAt: stamped))
+                if self.draftStageGeneration == generation { self.draftStagedConfirmed = true }
+            } catch RDMError.recoveryRequired {
+                self.needsWorkingReview = true
+                self.notice = "Local working copies need review before Folio can save more unsaved drafts."
+            } catch {
+                // The text stays in the editor; the next edit retries staging.
+            }
+        }
     }
 
     func checkpointDraft() async {
         guard !isCheckpointing, let session, let project, hasDraft,
               !draftPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let draftID = editingNoteID ?? UUID()
+        let draftID = editingNoteID ?? draftNoteID ?? UUID()
         let replacement = RDMNote(id: draftID, path: draftPath, markdown: draftMarkdown)
         let nextNotes: [RDMNote]
         if isNewDraft {
@@ -95,17 +214,28 @@ final class EncryptedProjectController {
         defer { isCheckpointing = false }
         do {
             _ = try await session.checkpoint(next)
+            draftStageTask?.cancel()
+            draftStageTask = nil
+            isStagingDraft = false
+            draftStagedConfirmed = false
+            checkpointFailure = nil
+            // The draft is now durable inside the archive; its local working
+            // copy is removed. A removal failure leaves it to surface at the
+            // next open as a reviewed leftover instead of failing the write.
+            do { try await session.discardDraft(id: draftID) } catch { }
             self.project = try await session.currentProject()
             self.selectedNoteID = draftID
             self.editingNoteID = nil
             self.isNewDraft = false
+            self.draftNoteID = nil
             self.draftPath = ""
             self.draftMarkdown = ""
-            notice = "Encrypted checkpoint written and memory-only search refreshed."
+            notice = "Encrypted checkpoint written and search refreshed."
             await search()
         } catch {
             // Keep the draft visible for review. A stale or invalid checkpoint
             // never discards the user's uncommitted text.
+            checkpointFailure = error.localizedDescription
             errorMessage = error.localizedDescription
         }
     }
@@ -215,9 +345,10 @@ final class EncryptedProjectController {
             session = opened
             project = try await opened.currentProject()
             phase = .unlocked
-            notice = "Unlocked in memory. Search results are not persisted."
+            notice = "Unlocked in memory. Unsaved drafts and the derived search index persist only in encrypted local storage; no plaintext project bytes are written."
             searchHits = []
             selectedNoteID = project?.notes.first?.id
+            await restoreLocalDrafts()
             if remember {
                 do { try EncryptedPassphraseKeychain.save(credential, for: fileURL) }
                 catch { notice = "Unlocked, but the optional Keychain save failed: \(error.localizedDescription)" }
@@ -259,6 +390,72 @@ final class EncryptedProjectController {
         catch { errorMessage = error.localizedDescription }
     }
 
+    /// Offers the most recent unsaved draft from the encrypted local working
+    /// copy. Additional drafts stay preserved until reviewed or discarded.
+    private func restoreLocalDrafts() async {
+        guard let session else { return }
+        do {
+            switch try await session.restoreWorkingState() {
+            case .empty:
+                break
+            case .current(let state):
+                if let message = presentRestoredDrafts(state) {
+                    notice = message
+                }
+            case .stale(let state, let reason):
+                needsWorkingReview = true
+                var message = "Local working copies need review: \(reason)"
+                if let state, let restored = presentRestoredDrafts(state) {
+                    message += " " + restored
+                }
+                notice = message
+            }
+        } catch {
+            errorMessage = "Local working copies could not be read: \(error.localizedDescription)"
+        }
+    }
+
+    /// Populates the single draft slot with the newest preserved draft.
+    /// Returns nil when the state carries no drafts.
+    private func presentRestoredDrafts(_ state: RDMWorkingState) -> String? {
+        guard let newest = state.drafts.max(by: { ($0.updatedAt, $0.id.uuidString) < ($1.updatedAt, $1.id.uuidString) }) else { return nil }
+        draftStageTask?.cancel()
+        draftStageTask = nil
+        isStagingDraft = false
+        draftStagedConfirmed = true
+        checkpointFailure = nil
+        draftNoteID = newest.id
+        if project?.notes.contains(where: { $0.id == newest.id }) == true {
+            editingNoteID = newest.id
+            isNewDraft = false
+        } else {
+            editingNoteID = nil
+            isNewDraft = true
+        }
+        draftPath = newest.path
+        draftMarkdown = newest.markdown
+        let extra = state.drafts.count > 1
+            ? " \(state.drafts.count - 1) more unsaved draft(s) stay preserved in the encrypted working copy."
+            : ""
+        return "Restored your most recent unsaved draft from the encrypted local working copy." + extra
+    }
+
+    /// Explicit reviewed resolution of inconsistent local working copies.
+    func resolveWorkingStateNow() async {
+        guard let session, needsWorkingReview else { return }
+        do {
+            let accepted = try await session.resolveWorkingState()
+            needsWorkingReview = false
+            if let accepted, let message = presentRestoredDrafts(accepted) {
+                notice = "Local working copies were reviewed and re-anchored. " + message
+            } else {
+                notice = "Local working copies were reviewed. Nothing was recoverable; the unreadable bytes were preserved in the project's private folder."
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func lock() async {
         guard !isCheckpointing else { return }
         guard let session else { resetToIdle(); return }
@@ -266,7 +463,7 @@ final class EncryptedProjectController {
         self.session = nil
         clearPlaintextState()
         phase = .idle
-        notice = "Encrypted project locked. Its working index and in-memory project copy were cleared."
+        notice = "Encrypted project locked. Its working index and in-memory project copy were cleared; unsaved drafts stay encrypted in the local working copy."
     }
 
     func close() async {
@@ -290,10 +487,14 @@ final class EncryptedProjectController {
         searchHits.removeAll(keepingCapacity: false)
         selectedNoteID = nil
         editingNoteID = nil
+        draftNoteID = nil
+        draftStageTask?.cancel()
+        draftStageTask = nil
         draftPath = ""
         draftMarkdown = ""
         isNewDraft = false
         isCheckpointing = false
+        needsWorkingReview = false
         query = ""
         pendingRecoveryCode = nil
         rememberPassphrase = false

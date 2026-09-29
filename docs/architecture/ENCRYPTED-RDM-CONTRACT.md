@@ -1,6 +1,6 @@
-# Encrypted `.rdm` foundation — Increment 07
+# Encrypted `.rdm` container — Increments 07–08
 
-**Estimated project completion: 41%.** This is a bounded cryptographic/container foundation, not a production security approval. Mac CryptoKit/APFS, native encrypted UI/keychain/recovery UX, persistent encrypted index design, independent review and release evidence remain outstanding.
+**Estimated project completion: 42%.** This is a bounded cryptographic/container foundation with persistent encrypted working storage, not a production security approval. Mac CryptoKit/APFS, native encrypted UI/keychain/recovery UX completion, independent review and release evidence remain outstanding.
 
 ## Current implementation
 
@@ -11,7 +11,7 @@
 - Project master, passphrase slot, recovery slot, domain-separated HKDF object keys, fresh nonces and AES-GCM associated data are separated by protocol purpose/project/snapshot/object/revision/chunk.
 - A recovery code is returned once by creation and is never placed in the archive. Changing a passphrase rewraps the current master; it does not claim to revoke old copied archives.
 - `RDMArchive` builds/opens a bounded ZIP64 envelope with clear routing header, encrypted manifest and encrypted immutable objects. It does not extract members to disk.
-- `RDMFileStore` uses the existing descriptor-relative vault lock and atomic encrypted-file checkpoint path. Creation refuses any pre-existing destination rather than replacing it; checkpoints refuse stale external replacement and write no plaintext staging archive. `RDMProjectSession` now binds that store to a memory-only index and prepares the replacement index before checkpoint installation.
+- `RDMFileStore` uses the existing descriptor-relative vault lock and atomic encrypted-file checkpoint path. Creation refuses any pre-existing destination rather than replacing it; checkpoints refuse stale external replacement and write no plaintext staging archive. `RDMProjectSession` binds that store to a memory-resident derived index with a persistent encrypted cache, prepares the replacement index before checkpoint installation, and persists unsaved drafts through the encrypted local working store described below.
 
 ## Header and member rules
 
@@ -37,9 +37,24 @@ The manifest authenticates object member name, logical kind/ID/path, revision, p
 
 ## Plaintext and metadata boundaries
 
-The `.rdm` archive does not expose note paths, titles, bodies, roadmap entities or connection text. Archive size/timing and clear routing metadata remain visible under the accepted initial metadata threat model. No persistent plaintext FTS/index or working object is implemented for encrypted mode yet.
+The `.rdm` archive does not expose note paths, titles, bodies, roadmap entities or connection text. Archive size/timing and clear routing metadata remain visible under the accepted initial metadata threat model. Persistent working objects and the derived index cache are sealed AES-256-GCM records under the same domain-separated key discipline as the archive; no plaintext working object, FTS/index file, SQLite file, WAL, preview or diagnostic cache exists for encrypted mode.
 
 Exports, clipboard, external open, diagnostics, previews, crash reports, swap and the unlocked process are separate data-boundary work. This foundation does not claim that a malicious unlocked OS cannot observe content.
+
+## Encrypted local working store (v1)
+
+Unsaved drafts for an open encrypted project persist in two alternating slot records, `.folio/<archive-name>.rdmworking.0` and `.rdmworking.1`, each one sealed record:
+
+```text
+FRW1 | format | slot | reserved | u64 generation | 16-byte fileID | 12-byte nonce | u64 ciphertext length | ciphertext | 16-byte tag
+```
+
+- The record plaintext is canonical JSON: project identity, base snapshot lineage, previous-generation number and digest, timestamp and the bounded draft list. AAD binds project UUID, fileID, slot and generation; slot parity (`slot == (generation − 1) mod 2`) is part of the format.
+- Each generation chains to the exact bytes of the previous generation's record. Restore classifies strictly: intact chained pairs (or a lone epoch-origin record) restore as `.current`; torn, mixed-epoch, chain-broken or unauthenticated copies surface as `.stale` with the best available state and block further draft writes (`recoveryRequired`) until an explicit `resolve()` accepts a state, preserves the set-aside bytes as private `.folio/*.rdmworking.discarded-*` copies, and re-anchors a fresh epoch.
+- Documented residual risk: restoring both slots consistently from one older backup is not locally detectable; the authenticated archive checkpoint with its stale-head refusal remains the durable trust anchor.
+- `clear()` removes both slot copies when drafts are explicitly discarded or absorbed into a checkpoint; the writer validates before replacement and never destroys set-aside bytes without a preserved copy.
+
+The derived search index cache is a single sealed `FRX1` record, `.folio/<archive-name>.rdmindex`, whose payload carries the note set and the archive snapshot it was built from. It is refreshed after each durable checkpoint; on open it is used only when it authenticates and matches the current head, and any absent, stale or invalid cache falls back to the in-memory rebuild. The cache is derived data: its failure modes cannot corrupt search or project content.
 
 ## Checkpoint lifecycle
 
@@ -59,16 +74,18 @@ The current checkpoint test suite covers wrong credentials, tampering, truncatio
 - 8 checkpoint tests: create/open/recovery, atomic checkpoint, locking, stale external file, no plaintext staging and malformed paths.
 - 8 working-index tests: memory-only bounds, deletion/close erasure, no persistent cache path, atomic rebuild preservation and current-object search.
 - 5 encrypted-session tests: recovery reopen, checkpoint/index ordering, failed checkpoint preservation, lock release and no plaintext cache artifacts.
+- Increment 08 adds 18 working-store tests (chained round trip, stale-detection matrix, reviewed resolution with byte preservation, draft bounds/validation, plaintext canaries, index-cache round trip/corruption/snapshot binding) and 5 session working-state tests (draft survive-close/reopen, discard-to-clear, stale-block until resolution, cache refresh after checkpoint, corrupted-cache fallback).
 - Full regression and Debug/Release counts are recorded in `Verification.json` after the current package run.
 
 ## Required before feature-complete handoff
 
 - Mac CryptoKit parity and actual Swift SDK typecheck.
+- Execution of the Increment 08 test additions in a Swift-capable environment (`bash scripts/test-core.sh`); the recorded full run remains Increment 07's 333 tests.
 - Fuzz/coverage/sanitizer testing of CArgon2/archive/record/header parsers and malicious size/entry graphs.
 - Independent cryptographic/protocol review, dependency/SBOM/license review and threat-model signoff.
-- Encrypted working store/index/cache/WAL/temp/preview/diagnostic design; plaintext FTS prohibited in encrypted mode.
+- Remaining working-store surface: preview/diagnostic boundaries, WAL-style write-ahead design if future on-demand object caching needs it, and power-loss/kill-at-boundary matrices for the slot pairs; plaintext FTS remains prohibited in encrypted mode.
 - Keychain/device slots, recovery rotation, lost-key UX, clipboard/export boundaries and password calibration on supported hardware. The current UI source offers explicit, non-synchronising passphrase convenience storage only; this is not device-slot or recovery-rotation completion.
 - APFS/power-loss/disk-full/permission/kill-at-boundary checkpoint tests and migration/rollback lineage.
-- Native encrypted workspace UI source now distinguishes Plain vault vs Encrypted project state, supports explicit reviewed checkpoints and prepares a non-destructive plain-to-encrypted copy with cancellation before archive creation; Mac SDK/runtime, migration, editing accessibility, Keychain and persistent-index validation remain.
+- Native encrypted workspace UI source now distinguishes Plain vault vs Encrypted project state, supports explicit reviewed checkpoints, persists unsaved drafts in the encrypted working copy and prepares a non-destructive plain-to-encrypted copy with cancellation before archive creation; Mac SDK/runtime, migration, editing accessibility, Keychain and multi-draft review UX validation remain.
 
 No sensitive project should be entrusted to this foundation yet. It is a carefully tested implementation spike with explicit non-completion boundaries.

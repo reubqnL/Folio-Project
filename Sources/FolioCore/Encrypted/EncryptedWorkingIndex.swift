@@ -19,10 +19,12 @@ public enum EncryptedIndexError: Error, LocalizedError, Equatable, Sendable {
     }
 }
 
-/// Encrypted-project v1 derived index: memory-only by design. It contains no
-/// SQLite file, WAL, temp file, thumbnail or persistent plaintext cache. The
-/// actor's stored Data is erased on close where possible; this is not OS-level
-/// memory secrecy. A reviewed encrypted persistent index can replace this later.
+/// Encrypted-project v1 derived index: memory-resident by design. It contains
+/// no SQLite file, WAL, temp file, thumbnail or persistent plaintext cache.
+/// The actor's stored Data is erased on close where possible; this is not
+/// OS-level memory secrecy. Persistence happens only through the sealed
+/// `RDMWorkingStore` index cache, which restores into this memory-resident
+/// form after authentication and falls back to a full rebuild.
 public actor EncryptedWorkingIndex {
     public nonisolated let projectID: UUID
     public nonisolated let persistentPlaintextStorage = false
@@ -49,11 +51,20 @@ public actor EncryptedWorkingIndex {
     }
     public func rebuild(_ project: RDMProjectPayload) throws {
         try requireOpen(); guard project.id == projectID else { throw EncryptedIndexError.wrongProject }
-        guard project.notes.count <= maximumRecords else { throw EncryptedIndexError.tooLarge }
+        try rebuild(notes: project.notes)
+    }
+
+    /// Rebuilds from an authenticated note set (checkpoint payload or a
+    /// validated encrypted index cache). The caller binds the note set to the
+    /// project identity; this method preserves the same validation and bounds
+    /// as a full project rebuild.
+    public func rebuild(notes: [RDMNote]) throws {
+        try requireOpen()
+        guard notes.count <= maximumRecords else { throw EncryptedIndexError.tooLarge }
         var next: [UUID: Record] = [:]
-        next.reserveCapacity(project.notes.count)
+        next.reserveCapacity(notes.count)
         var nextBytes = 0
-        for note in project.notes {
+        for note in notes {
             guard next[note.id] == nil else { throw EncryptedIndexError.invalidInput }
             let record = try makeRecord(note)
             let bodyBytes = record.body.utf8.count

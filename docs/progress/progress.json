@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 41,
+  "estimated_percent": 46,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -13,12 +13,12 @@
     {
       "area": "Notes, project storage and search",
       "weight": 20,
-      "credited_points": 12
+      "credited_points": 13
     },
     {
       "area": "Native editing, reading and accessibility",
       "weight": 15,
-      "credited_points": 7
+      "credited_points": 10
     },
     {
       "area": "Roadmap and connections",
@@ -33,7 +33,7 @@
     {
       "area": "Encrypted .rdm and key recovery",
       "weight": 13,
-      "credited_points": 1
+      "credited_points": 2
     },
     {
       "area": "E2EE collaboration",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 07: authenticated .rdm archive/passphrase/recovery/atomic checkpoint, bounded memory-only encrypted working index and session boundary. 333 Debug and Release tests pass, including 56 focused encrypted/archive/checkpoint/working-index/hostile-input/session tests. Mac CryptoKit/APFS/working-index integration and independent review remain unverified.",
-  "current_work": "Native encrypted-project UI/keychain/recovery flows, non-destructive plain-to-encrypted copy and persistent encrypted index/cache design; Mac CryptoKit/APFS/native UI/security validation remain open.",
+  "last_completed": "Increment 12: large-file/long-line benchmark harness (N02) \u2014 deterministic BenchmarkCorpora sized against MarkdownLimits plus FolioBenchmarkProbe measuring parse, per-keystroke incremental reparse, link scan and excerpt (median/p95/min, printed and never asserted); 9 new tests (421 total, new tests unrun here; recorded full run remains Increment 07's 333). Measurements themselves remain unrecorded until the probe runs on the release machine.",
+  "current_work": "Execution of the Increment 08-12 suites and the benchmark probe in a Swift-capable environment (scripts/test-core.sh, scripts/run-benchmarks.sh), then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage for the working slots and save barriers, and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
   "history": [
     {
       "increment": "04",
@@ -73,6 +73,31 @@
       "increment": "07",
       "estimate": 41,
       "basis": "Encrypted area credited 1/13 for tested primitive/archive/checkpoint foundation; no credit for Mac parity, persistent encrypted working store, Keychain, fuzzing or independent review."
+    },
+    {
+      "increment": "08",
+      "estimate": 42,
+      "basis": "Encrypted area credited 2/13 for the tested-design persistent encrypted working store and index cache with fail-closed review semantics; no credit for Mac parity, fault/power-loss coverage, Keychain slots or independent review. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "09",
+      "estimate": 43,
+      "basis": "Notes/storage area credited 13/20 for the tested-design durability acknowledgement model (honest seven-state labels, measured coalescing bounds, checkpoint/sync separation); no credit for Mac barrier/power-loss verification. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "10",
+      "estimate": 44,
+      "basis": "Native editing/reading area credited 8/15 for the tested-design incremental Markdown reparse (parse-equal splicing with full-parse fallback, stable untouched identities); no credit for measured large-file performance on real hardware. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "11",
+      "estimate": 45,
+      "basis": "Native editing/reading area credited 9/15 for the tested-design compact link repair (span-exact link scanning with parser/graph equivalence tests, digest-bound single-link rewrites that keep the original until confirmed); no credit for a rendered-preview broken-link marker. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "12",
+      "estimate": 46,
+      "basis": "Native editing/reading area credited 10/15 for the benchmark harness that decision 26 requires as release-gate evidence (deterministic corpora + measured editor-critical paths, timings never asserted); no credit for measured performance itself \u2014 no measurements exist until the probe runs on the release machine. New tests not yet executed in a Swift-capable environment do not raise the credit further."
     }
   ]
 }
