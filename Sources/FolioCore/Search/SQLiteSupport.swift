@@ -53,7 +53,14 @@ final class SQLiteConnection: @unchecked Sendable {
         let result = sqlite3_open_v2(file.path, &handle, flags, nil)
         guard result == SQLITE_OK, handle != nil else { sqlite3_close_v2(handle); handle = nil; throw SearchIndexError.sqlite(result) }
         sqlite3_busy_timeout(handle, 150)
+        #if !canImport(Darwin)
+        // Apple's system libsqlite3 is built with SQLITE_OMIT_LOAD_EXTENSION:
+        // run-time extension loading is compiled out of both the SDK header and
+        // the dylib (sqlite3_compileoption_get reports OMIT_LOAD_EXTENSION), so
+        // there is nothing to enable or disable there. Everywhere else the C API
+        // exists, so explicitly assert the default-disabled state.
         sqlite3_enable_load_extension(handle, 0)
+        #endif
         sqlite3_limit(handle, SQLITE_LIMIT_LENGTH, 16 * 1024 * 1024)
         sqlite3_limit(handle, SQLITE_LIMIT_SQL_LENGTH, 64 * 1024)
         sqlite3_limit(handle, SQLITE_LIMIT_ATTACHED, 0)

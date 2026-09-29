@@ -157,7 +157,7 @@ public enum MarkdownParser {
             }
             if trim.hasPrefix("<"), !trim.hasPrefix("<http") {
                 let first = index
-                var contents: [text]; index += 1
+                var contents = [text]; index += 1
                 while index < texts.count, !texts[index].trimmingCharacters(in: .whitespaces).isEmpty { contents.append(texts[index]); index += 1 }
                 add(.literalHTML(contents.joined(separator: "\n")), from: first, through: index - 1,
                     warnings: ["Raw HTML is displayed literally; it cannot execute or load resources."])

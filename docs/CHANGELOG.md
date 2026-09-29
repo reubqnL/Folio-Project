@@ -1,3 +1,13 @@
+# Fix — macOS core compile follow-up (2026-09-29)
+
+## Fixed
+
+- The first post-libarchive Mac compile exposed two additional portability defects: a malformed `var contents: [text]` declaration in the raw-HTML Markdown path and an unavailable `sqlite3_enable_load_extension` call. The parser declaration now uses the intended inferred `[String]` array, and the SQLite call is compiled only on non-Darwin platforms because Apple’s system SQLite is built with `SQLITE_OMIT_LOAD_EXTENSION`.
+
+## Evidence
+
+- On Apple Swift 6.3.2 / macOS 26 / arm64, `bash scripts/test-core.sh` now passes the libarchive compilation stage and reaches FolioCore compilation; this follow-up was made directly from the reported compiler output. A complete test run is still required after pulling this fix.
+
 # Fix — macOS compile: vendored libarchive headers (2026-09-29)
 
 ## Fixed
