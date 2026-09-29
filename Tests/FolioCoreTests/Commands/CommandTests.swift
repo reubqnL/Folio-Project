@@ -55,4 +55,14 @@ final class CommandTests: XCTestCase {
     func testNoDeveloperExecutionCommandExists() {
         XCTAssertFalse(FolioCommandID.allCases.contains { $0.rawValue.lowercased().contains("execute") || $0.rawValue.lowercased().contains("foliodev") })
     }
+    func testRepairLinksCommandIsReachableAndNoteScoped() {
+        XCTAssertTrue(CommandCatalog.matches("repair").contains(.repairLinks))
+        XCTAssertTrue(CommandCatalog.matches("broken link").contains(.repairLinks))
+        let noNote = CommandContext(hasProject: true, hasNote: false, busy: false)
+        XCTAssertNotNil(noNote.disabledReason(for: .repairLinks))
+        let withNote = CommandContext(hasProject: true, hasNote: true, busy: false)
+        XCTAssertNil(withNote.disabledReason(for: .repairLinks))
+        XCTAssertNoThrow(try ShortcutPolicy.validate(FolioCommandID.repairLinks.defaultShortcut,
+                                                     for: .repairLinks, in: ShortcutPolicy.defaults))
+    }
 }

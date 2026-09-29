@@ -21,6 +21,7 @@ final class WorkspaceSession {
     let shortcuts = ShortcutPreferences()
     var showingSearch = false
     var showingCommands = false
+    var showingLinkRepair = false
     var linkChoice: NoteLinkChoice?
     var findInNoteRequest: UUID?
     var destination: Destination = .launcher
@@ -485,6 +486,7 @@ final class WorkspaceSession {
         case .save: Task { await saveSelected() }
         case .searchNotes: showingCommands = false; showingSearch = true
         case .commandPalette: showingSearch = false; showingCommands = true
+        case .repairLinks: showingCommands = false; showingLinkRepair = true
         case .showSource: selectedDocument?.editorPresentation = .source
         case .showPreview: selectedDocument?.editorPresentation = .preview
         case .showSplit: selectedDocument?.editorPresentation = .split
@@ -749,6 +751,50 @@ final class WorkspaceSession {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Compact link repair (Increment 11)
+
+    private func linkCandidates() -> [NoteLinkCandidate] {
+        notes.map {
+            NoteLinkCandidate(id: $0.id, title: $0.title, path: $0.relativePath,
+                              tags: search.knownTags[$0.id] ?? [], modifiedAt: $0.modifiedAt)
+        }
+    }
+
+    /// Broken and ambiguous links in the open note, with the same resolution
+    /// the preview link click uses. Nothing is rewritten by inspecting.
+    func linkRepairInspections() -> [NoteLinkInspection] {
+        guard let document = selectedDocument else { return [] }
+        return NoteLinkRepair.inspect(source: document.text,
+                                      sourcePath: document.baseline.note.relativePath,
+                                      candidates: linkCandidates())
+    }
+
+    /// Applies one user-confirmed replacement. The original link is kept until
+    /// this succeeds; on any refusal the note text is untouched and the reason
+    /// is returned for display.
+    func applyLinkRepair(_ inspection: NoteLinkInspection, to candidate: NoteLinkCandidate) -> String? {
+        guard let document = selectedDocument else { return "Open a note first." }
+        let replacement = NoteLinkRepair.replacementTarget(candidate, for: inspection.occurrence)
+        do {
+            let edit = try NoteLinkRepair.edit(replacing: inspection.occurrence, with: replacement, in: document.text)
+            let repaired = try NoteLinkRepair.apply(edit, to: document.text)
+            document.text = repaired
+            document.editGeneration += 1
+            return nil
+        } catch let error as NoteLinkRepairError {
+            switch error {
+            case .staleSource:
+                return "The note changed since this list was computed. Review the links again before replacing."
+            case .spanMismatch:
+                return "This link no longer matches the note text. Review the links again."
+            case .blockedReplacement:
+                return "That replacement would break the link syntax. The note was not changed."
+            }
+        } catch {
+            return "The repair was not applied. The note was not changed."
         }
     }
 

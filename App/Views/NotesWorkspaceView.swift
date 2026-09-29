@@ -101,6 +101,7 @@ struct NotesWorkspaceView: View {
                 Button { Task { await session.refreshProject() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                     .disabled(session.project == nil || session.isRefreshing)
                 Button { Task { await session.recoverProject() } } label: { Label("Recovery", systemImage: "clock.arrow.circlepath") }
+                Button { session.runCommand(.repairLinks) } label: { Label("Repair Links", systemImage: "wrench") }
                     .disabled(session.project == nil)
                 Button { session.creationSeed = nil; session.showingNewNote = true } label: { Label("New Note", systemImage: "square.and.pencil") }
                     .disabled(!session.canCreateNote)

@@ -3,7 +3,7 @@ import Foundation
 public enum FolioCommandID: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case openProject, newNote, save, searchNotes, commandPalette, capture
     case showSource, showPreview, showSplit, followCursor
-    case refresh, recovery, showLauncher, rebuildSearch
+    case refresh, recovery, showLauncher, rebuildSearch, repairLinks
     case showRoadmap, showConnections, newRoadmapItem, undoRoadmap, redoRoadmap
     public var id: Self { self }
     public var title: String {
@@ -22,6 +22,7 @@ public enum FolioCommandID: String, CaseIterable, Codable, Hashable, Sendable, I
         case .recovery: "Review Recovery Copies…"
         case .showLauncher: "Show Launcher"
         case .rebuildSearch: "Rebuild Search Cache"
+        case .repairLinks: "Repair Note Links…"
         case .showRoadmap: "Open Roadmap"
         case .showConnections: "Open Connections Graph"
         case .newRoadmapItem: "New Roadmap Item…"
@@ -45,6 +46,7 @@ public enum FolioCommandID: String, CaseIterable, Codable, Hashable, Sendable, I
         case .recovery: "conflict preserved journal"
         case .showLauncher: "home modules"
         case .rebuildSearch: "index reset derived cache"
+        case .repairLinks: "link broken missing ambiguous fix repair wikilink"
         case .showRoadmap: "planning timeline kanban"
         case .showConnections: "graph links neighbourhood 2d 3d"
         case .newRoadmapItem: "create task milestone dates"
@@ -68,6 +70,7 @@ public enum FolioCommandID: String, CaseIterable, Codable, Hashable, Sendable, I
         case .recovery: .init(key: "u", modifiers: [.command, .shift])
         case .showLauncher: .init(key: "l", modifiers: [.command, .shift])
         case .rebuildSearch: .init(key: "f", modifiers: [.command, .option, .shift])
+        case .repairLinks: .init(key: "e", modifiers: [.command, .shift])
         case .showRoadmap: .init(key: "r", modifiers: [.command, .option])
         case .showConnections: .init(key: "g", modifiers: [.command, .option])
         case .newRoadmapItem: .init(key: "n", modifiers: [.command, .option, .shift])
@@ -93,7 +96,7 @@ public struct CommandContext: Sendable {
         switch command {
         case .openProject, .showLauncher, .commandPalette: return nil
         case .newNote, .searchNotes, .refresh, .recovery, .rebuildSearch, .showRoadmap, .showConnections, .newRoadmapItem: return hasProject ? nil : "Open a project first."
-        case .save, .showSource, .showPreview, .showSplit, .capture: return hasNote ? nil : "Open a note first."
+        case .save, .showSource, .showPreview, .showSplit, .capture, .repairLinks: return hasNote ? nil : "Open a note first."
         case .undoRoadmap: return canUndoRoadmap ? nil : "There is no available roadmap undo."
         case .redoRoadmap: return canRedoRoadmap ? nil : "There is no available roadmap redo."
         case .followCursor:

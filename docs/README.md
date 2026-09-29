@@ -10,7 +10,7 @@ overview, repository map and build instructions.
 | Document | Contents |
 |---|---|
 | [`native-development.md`](native-development.md) | Native build, verification commands, open Mac gates, privacy boundaries and the state of the encrypted container. This was the package `README.md` before the reorganisation. |
-| [`CHANGELOG.md`](CHANGELOG.md) | Increment history, newest first (10 is current). |
+| [`CHANGELOG.md`](CHANGELOG.md) | Increment history, newest first (11 is current). |
 
 ### Architecture and security contracts
 

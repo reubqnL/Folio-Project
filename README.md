@@ -26,6 +26,10 @@ A local-first personal project and knowledge management environment:
 - **Editor & preview** — native Markdown editing with source, preview and split
   layouts; the preview updates smoothly as you type, refreshing only the part of
   the note that changed.
+- **Repairable links** — links between notes resolve as you read them; links
+  that are broken or point at several notes at once can be reviewed in one
+  compact list and repaired one confirmation at a time, with the original link
+  kept until you confirm a replacement.
 - **Honest save states** — edits are reported as pending until the write is
   acknowledged on disk; a queued or timed write is never shown as saved, and
   local durability, archive checkpoints and sync are reported separately.

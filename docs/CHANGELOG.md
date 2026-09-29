@@ -1,3 +1,18 @@
+# Increment 11 — compact link repair (N02)
+
+## Added
+
+- `NoteLinkRepair` (`Sources/FolioCore/Markdown/NoteLinkRepair.swift`): broken and ambiguous note links are now visible and repairable (baseline §4.2; decision 12). Every authored note link is found at an exact source span with the exact semantics of the inline parser and the knowledge graph — code, literal HTML, metadata and rules never contribute; blocked, external and pure-anchor targets are not note links; escapes and images are excluded.
+- A confirmed repair rewrites exactly one link's target — the label, the `|alias` and `#section` anchors keep the author's form (title links stay titles, path links stay paths) — and the original link is kept until the replacement is confirmed. Each edit is bound to the source digest it was computed against and refuses stale or mismatched application; a replacement that would not re-parse as a note link at the same site (embedded `]]`, `|`, `)` and similar) is refused, never half-applied.
+- The compact repair sheet (decision 12 — folder path, tags and modification date per candidate) lists links with no matching note or several matching notes, with one explicit confirmation per replacement; a refusal never changes the note. Reachable as "Repair Note Links…" in the toolbar and the command palette (⌘⇧E, safely remappable).
+- `repairLinks` joins the command catalog with the same safe-remapping policy as every other command (reserved keys, conflicts named, never silently rebound).
+- 23 focused tests (412 total in source): scanner equivalence pinned against both `MarkdownInlineParser` targets and `GraphLinkExtractor` targets over an adversarial corpus (escapes, code spans, nested emphasis, labels, unclosed forms, duplicate links, table pipes and escapes, CRLF/emoji spans, block-kind policy), resolution inspection (missing/unique/ambiguous), form-preserving replacement text, single-occurrence rewrites, stale/span/blocked refusals, and repairs through headings, quotes, list items and table cells.
+
+## Notes
+
+- Occurrences whose authored target does not appear verbatim in the source (table-cell escape rewriting such as `[[x\|y]]` content) are not offered for repair — a repair must rewrite exactly what the author wrote. The scanner's recognition still matches the parser exactly; only the rewriteable set is narrower.
+- A `]` inside a link label breaks the outer `[label](target)` form in this parser (the inner wikilink becomes a top-level link); the scanner and tests pin that exact behaviour rather than papering over it.
+
 # Increment 10 — incremental Markdown reparse (N02)
 
 ## Added

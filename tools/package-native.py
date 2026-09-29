@@ -1,4 +1,4 @@
-"""Package Increment 10 with narrowly scoped, real verification evidence."""
+"""Package Increment 11 with narrowly scoped, real verification evidence."""
 from pathlib import Path
 import hashlib
 import json
@@ -66,7 +66,7 @@ assert 'AVAudioFile(' not in speech_source and 'SFSpeechRecognizer(' not in spee
 assert 'CaptureInputSequenceProvider(' not in speech_source and 'AnalyzerInputConverter(' not in speech_source
 
 unit_count = sum(len(re.findall(r'func test\w+\(', p.read_text())) for p in (ROOT / 'Tests').rglob('*.swift'))
-assert unit_count == 389
+assert unit_count == 412
 # Evidence/ holds generated test output and is intentionally not committed
 # (see .gitignore). Recreate it from the current source when it is absent, so
 # the assertions below always read results produced by this checkout.
@@ -78,7 +78,7 @@ if any(not (ROOT / 'Evidence' / name).is_file() for name in REQUIRED_EVIDENCE):
 
 for name in ['core-tests.log', 'core-tests-release.log']:
     text = (ROOT / 'Evidence' / name).read_text()
-    assert re.search(r'Executed 389 tests, with 0 failures', text)
+    assert re.search(r'Executed 412 tests, with 0 failures', text)
     assert "Test Suite 'All tests' passed" in text
     assert 'warning:' not in text and 'error:' not in text
 processes = json.loads((ROOT / 'Evidence/process-crash-tests.json').read_text())
@@ -130,14 +130,14 @@ inspection = {
 }
 (ROOT / 'Evidence/source-inspection.json').write_text(json.dumps(inspection, indent=2))
 verification = {
-    'increment': '10',
-    'status': 'Increment 10 development source; encrypted .rdm foundation with persistent encrypted working storage and the honest durability acknowledgement model, plus incremental Markdown reparse, tested; estimated scope completion 44%; native/security/release gates remain blocked',
+    'increment': '11',
+    'status': 'Increment 11 development source; encrypted .rdm foundation with persistent encrypted working storage and the honest durability acknowledgement model, incremental Markdown reparse and compact link repair, tested; estimated scope completion 45%; native/security/release gates remain blocked',
     'personal_answers': {'total': 50, 'ui_ux': 25, 'engineering': 25},
     'core_compiled_targets': ['FolioCore', 'FolioFileIO', 'CSQLite', 'FolioStorageProbe', 'FolioReadingProbe', 'FolioPlanningProbe', 'FolioCaptureProbe', 'FolioSpeechProbe', 'CArgon2', 'FolioRDMPrimitives'],
     'core_compilation_platform': 'Linux x86_64 / Swift 6.0.3',
     'distinct_unit_tests': unit_count,
-    'debug_tests': 'PASS — 389 tests, 0 failures',
-    'release_optimised_tests': 'PASS — same 389 tests, 0 failures',
+    'debug_tests': 'PASS — 412 tests, 0 failures',
+    'release_optimised_tests': 'PASS — same 412 tests, 0 failures',
     'process_storage_checks': 'PASS — 13 checks, including real SIGKILL',
     'reading_workflow_checks': 'PASS — 11 checks with 1,000 generated note fixtures',
     'planning_graph_workflow': 'PASS — 10 generated-data checks',
@@ -202,7 +202,7 @@ for relative in BUNDLED_FILES:
     assert path.is_file(), path
     files.append((path, 'Folio/' + relative))
 manifest = {
-    'bundle': 'Folio native source — Increment 10',
+    'bundle': 'Folio native source — Increment 11',
     'status': verification['status'],
     'files': [{'path': name, 'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()} for path, name in files]
 }
