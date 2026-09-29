@@ -66,7 +66,7 @@ assert 'AVAudioFile(' not in speech_source and 'SFSpeechRecognizer(' not in spee
 assert 'CaptureInputSequenceProvider(' not in speech_source and 'AnalyzerInputConverter(' not in speech_source
 
 unit_count = sum(len(re.findall(r'func test\w+\(', p.read_text())) for p in (ROOT / 'Tests').rglob('*.swift'))
-assert unit_count == 421
+assert unit_count == 437
 # Evidence/ holds generated test output and is intentionally not committed
 # (see .gitignore). Recreate it from the current source when it is absent, so
 # the assertions below always read results produced by this checkout.
@@ -78,7 +78,7 @@ if any(not (ROOT / 'Evidence' / name).is_file() for name in REQUIRED_EVIDENCE):
 
 for name in ['core-tests.log', 'core-tests-release.log']:
     text = (ROOT / 'Evidence' / name).read_text()
-    assert re.search(r'Executed 421 tests, with 0 failures', text)
+    assert re.search(r'Executed 437 tests, with 0 failures', text)
     assert "Test Suite 'All tests' passed" in text
     assert 'warning:' not in text and 'error:' not in text
 processes = json.loads((ROOT / 'Evidence/process-crash-tests.json').read_text())
@@ -136,8 +136,8 @@ verification = {
     'core_compiled_targets': ['FolioCore', 'FolioFileIO', 'CSQLite', 'FolioStorageProbe', 'FolioReadingProbe', 'FolioPlanningProbe', 'FolioCaptureProbe', 'FolioSpeechProbe', 'CArgon2', 'FolioRDMPrimitives'],
     'core_compilation_platform': 'Linux x86_64 / Swift 6.0.3',
     'distinct_unit_tests': unit_count,
-    'debug_tests': 'PASS — 421 tests, 0 failures',
-    'release_optimised_tests': 'PASS — same 421 tests, 0 failures',
+    'debug_tests': 'PASS — 437 tests, 0 failures',
+    'release_optimised_tests': 'PASS — same 437 tests, 0 failures',
     'process_storage_checks': 'PASS — 13 checks, including real SIGKILL',
     'reading_workflow_checks': 'PASS — 11 checks with 1,000 generated note fixtures',
     'planning_graph_workflow': 'PASS — 10 generated-data checks',

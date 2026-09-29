@@ -24,7 +24,8 @@ The percentage is a weighted planning estimate, not measured security or correct
 
 ## Evidence obtained on Linux
 
-- **333 core XCTest cases pass in Debug and Release on the recorded Linux runs.** Increments 08–12 add 23 working-store/session tests, 10 durability-model tests, 23 incremental-reparse tests, 24 link-repair tests and 9 benchmark tests (421 total) whose execution still has to run on a Swift toolchain before counting as evidence.
+- **All 421 tests of the base commit pass in Debug and Release on macOS 27.0.1 / arm64 / Swift 6.4** (owner's run, 2026-09-29): 0 failures in both configurations, the recorded Linux runs having previously covered 333. Increment 13 adds 16 layout tests (437 in source) that have **not** executed anywhere, because the owner's checkout never switched to that branch.
+- The earlier "333 core XCTest cases on Linux" figure is superseded by that Mac run for the base commit.
 - **69 generated workflow/process scenarios pass:** 13 note storage, 12 roadmap storage, 11 reading, 10 planning/graph, 11 capture/storage and 12 synthetic speech/handoff.
 - **6 separate C audio-ring checks pass with AddressSanitizer and UndefinedBehaviorSanitizer**, including 100,000 accepted threaded frames.
 - C warning/static-analysis checks cover Linux sources. Mac Swift is syntax-parsed only.
@@ -51,10 +52,16 @@ On Apple Silicon, macOS 26+, Xcode 26+, Python 3 and XcodeGen:
 
 ```sh
 brew install xcodegen
-bash ../scripts/verify-on-mac.sh
+bash ../scripts/verify-on-mac.sh   # core checks, ad-hoc Debug build, entitlement assertions
+bash ../scripts/run-app.sh         # build and launch the app
 ```
 
 This runs core/probe checks, generates the Xcode project, attempts an ad-hoc Debug build and checks sandbox/file-picker/audio-input entitlements. Run microphone tests only through the actual app with its purpose string and explicit Record action. Ad-hoc signing is not distribution approval; the bundle identifier remains a development placeholder.
+
+Two build-environment facts learned the hard way on the owner's Mac, both encoded in the scripts:
+
+- **`swift run` cannot launch the app.** The package defines six executable probes (storage, reading, planning, capture, speech, benchmark); the app is the Xcode target in `project.yml`. `swift run` only reports "multiple executable products available". Use `run-app.sh`.
+- **Do not build inside a cloud-synced folder.** The owner's checkout is under `~/Library/CloudStorage/OneDrive-Personal/…`. OneDrive's file provider attaches `com.apple.FinderInfo` / `com.apple.ResourceFork` attributes to the files it manages, and `codesign` rejects a bundle carrying them: `resource fork, Finder information, or similar detritus not allowed`. The observed evidence is that a `swift test` run with its scratch path under `~/.cache` signed and passed, while the same tests with their scratch path under `./.build-output` inside OneDrive failed to sign. Both scripts now default to `FOLIO_BUILD_DIR=$HOME/.cache/folio-mac-build`, generate only `Folio.xcodeproj` inside the repository, clear attributes defensively before signing, and warn when the checkout is inside a synced folder.
 
 On the supported core-test host:
 

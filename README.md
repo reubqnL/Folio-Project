@@ -144,12 +144,28 @@ Requires an Apple Silicon Mac on macOS 26+ with Xcode 26+, Python 3 and
 
 ```sh
 brew install xcodegen
-bash scripts/verify-on-mac.sh
+bash scripts/verify-on-mac.sh   # core checks, build, entitlement assertions
+bash scripts/run-app.sh         # build and launch the app
 ```
 
-The script runs the core checks, generates `Folio.xcodeproj` from `project.yml`,
-builds an ad-hoc-signed Debug app into `.build-output/`, and verifies the App
-Sandbox, user-selected-file and audio-input entitlements are present.
+`verify-on-mac.sh` runs the core checks, generates `Folio.xcodeproj` from
+`project.yml`, builds an ad-hoc-signed Debug app, and verifies the App Sandbox,
+user-selected-file and audio-input entitlements are present. `run-app.sh` builds
+and opens the app once the project has been generated.
+
+> **The app is not a `swift run` target.** The Swift package at the repository
+> root defines the six command-line probes; Folio itself is the Xcode target in
+> `project.yml`, because it needs an `Info.plist`, an asset catalog and sandbox
+> entitlements. `swift run` only reports that several executable products are
+> available. Use the scripts above.
+
+> **Build products are written to `~/.cache/folio-mac-build`, not into the
+> checkout.** This matters if the project sits in a cloud-synced folder such as
+> OneDrive or iCloud Drive: those file providers attach extended attributes to
+> every file they manage, and macOS `codesign` refuses to sign a bundle carrying
+> them ("resource fork, Finder information, or similar detritus not allowed").
+> Keeping the build tree outside the synced folder avoids that failure entirely.
+> Set `FOLIO_BUILD_DIR` to choose a different location.
 
 > Ad-hoc signing is local development only. It is not Developer ID signing,
 > notarization, an installer or production security approval. The bundle

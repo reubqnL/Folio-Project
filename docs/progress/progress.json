@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 13: workspace layout stabilisation after the owner's manual Mac UI smoke test (responsive-layout, editor-split and Notes/Roadmap/Connections navigation defects). Source only: no Swift toolchain and no macOS SDK are reachable from this workspace, so nothing is compiled or run and no point is credited.",
-  "current_work": "Run the layout-stabilisation source on the Mac: `bash scripts/test-core.sh` for the 16 new WorkspaceLayoutPolicy tests plus the existing suites, then `bash scripts/verify-on-mac.sh` to build, and re-run the owner's responsiveness checklist at wide, normal and smallest supported window sizes on the disposable FOLIO TEST project. Every UI checklist item is still unchecked until that run; live microphone/speech testing stays blocked until the UI is stable.",
+  "last_completed": "Increment 13 (workspace layout stabilisation) is written but still has never executed: the owner's Mac checked out the base commit twice by mistake (421 tests both times), so the 16 new tests and every view edit are unverified. Fixes made from that transcript: scripts/run-app.sh plus README/docs explaining that the app is an Xcode target and not a `swift run` product, and build products moved to $HOME/.cache/folio-mac-build because codesign rejects bundles carrying the extended attributes a cloud file provider (the owner's OneDrive checkout) attaches.",
+  "current_work": "Get the owner's Mac onto commit 66033cd and actually run it. The checkout was blocked by two locally modified files (`App/Speech/AppleSpeechPipeline.swift`, `App/WorkspaceSession.swift`) whose edits are already contained in that commit: stash them, check out the branch, confirm with `git log --oneline -1`, then `stash drop`. Then `bash scripts/test-core.sh` must report 437 tests (not 421), `bash scripts/run-app.sh` must build and launch the app, and the responsiveness checklist must be walked at wide, normal and smallest supported window sizes on the disposable FOLIO TEST project. Every UI checklist item is unchecked until then, and live microphone/speech testing stays blocked until the UI is stable.",
   "history": [
     {
       "increment": "04",
@@ -103,6 +103,11 @@
       "increment": "13",
       "estimate": 46,
       "basis": "No score change: the workspace layout stabilisation (window minimum enforced with .contentMinSize, user-controlled panes, width-triggered pane hiding removed, Split reflow) is unverified source written without a Swift toolchain, so it earns no credit. Verified here: an independent Python mirror of the two layout functions reproduced every arithmetic expectation of the 16 new FolioCore tests. Not verified: compilation, the tests themselves, and every SwiftUI behaviour the owner reported."
+    },
+    {
+      "increment": "13b",
+      "estimate": 46,
+      "basis": "No score change. The layout stabilisation remains unverified source, and the Mac run that was meant to verify it executed the base commit instead, so nothing about the reported UI defects is confirmed fixed. Credited only as process fixes for two environment defects proven by the transcript: `swift run` cannot launch an Xcode-target app, and building inside a cloud-synced checkout fails at codesign because of file-provider extended attributes. The base commit does now have a complete macOS 27 / arm64 / Swift 6.4 core run (421 Debug + 421 Release, all probes and process scenarios PASS), which is real evidence for that commit and no evidence for this one."
     }
   ]
 }
