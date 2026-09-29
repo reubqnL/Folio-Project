@@ -24,7 +24,8 @@ A local-first personal project and knowledge management environment:
 - **Markdown projects** — your notes remain plain Markdown files in a folder you
   choose; Folio never rewrites your front matter or moves files behind your back.
 - **Editor & preview** — native Markdown editing with source, preview and split
-  layouts.
+  layouts; the preview updates smoothly as you type, refreshing only the part of
+  the note that changed.
 - **Honest save states** — edits are reported as pending until the write is
   acknowledged on disk; a queued or timed write is never shown as saved, and
   local durability, archive checkpoints and sync are reported separately.

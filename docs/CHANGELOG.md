@@ -1,3 +1,14 @@
+# Increment 10 — incremental Markdown reparse (N02)
+
+## Added
+
+- `MarkdownReparseSession` (`Sources/FolioCore/Markdown/MarkdownIncremental.swift`): the reading preview now re-parses only the changed region of a note per keystroke. A line-level diff bounds a reparse window; blocks outside it are spliced with their exact spans, content+occurrence identities and merged warnings, so untouched preview blocks keep stable `ForEach` identities and scroll anchors. The result is always parse-equal to `MarkdownParser.parse` on the same source — the splice is proven before use, and every unprovable case (limited parses, over-budget sources, full-document edits, changed block budgets) falls back to a full parse.
+- Boundary proofs around the splice: a 2-line lookahead window floor (setext underlines and table alignment rows decide boundaries ahead), window-EOF proofs (`rule`/`listItem` at EOF can pair with a suffix line; blank-extension for open paragraphs/quotes/HTML; fence-close scan for unclosed code), straddle growth so no old block tail is dropped, and the front-matter scan treated as document-wide (an edit in the first 129 lines reparses from line 0; mid-document windows can never form metadata blocks).
+- `MarkdownParser` internals restructured for the splice (`parseDetailed`/`project`/`splitLines`) with byte-identical public `parse`/`excerpt` output; the existing 23 parser tests cover the unchanged surface.
+- The reading preview (`MarkdownPreviewView`) keeps one session per document and preview mode, runs `reparse` on a detached task away from the main actor, and rebuilds the session when excerpt mode toggles or the document changes.
+- 23 focused tests: adversarial splice swallows (fence/table/quote), unclosed fences to EOF, closing fences appearing later, setext partner changes across the splice, front matter added/removed/inserted/never-suffix-reused, the two-line lookahead hazard, edit-then-undo, duplicate-block renumbering, untouched-block id stability, empty/CRLF/emoji sources, budget fallbacks, and a 4,000-block document where one edit reparses at most 6 blocks (timings printed, never asserted).
+- Development evidence: the algorithm survived 32,000 randomized edit-sequence equivalence checks against full parses via an out-of-repository Python mirror (not shipped, not a substitute for the Swift test run).
+
 # Increment 09 — honest durability acknowledgement (N01 contract)
 
 ## Added

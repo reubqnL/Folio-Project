@@ -1,25 +1,24 @@
-# Implementation tracker — Increment 09
+# Implementation tracker — Increment 10
 
-**Estimated completion: 43% (weighted planning estimate). Release/security readiness: blocked. Owner testing: HOLD.**
+**Estimated completion: 44% (weighted planning estimate). Release/security readiness: blocked. Owner testing: HOLD.**
 
 All 50 decisions remain authoritative. Every user-facing progress update includes the estimate and completed work; code/test counts do not imply production security.
 
 ## Added/tested in the core
 
-- `VaultDurability`: the N01 seven-state durability acknowledgement model (`notCreated`, `loadedFromDisk`, `editsPending`, `writing`, `durableOnDisk`, `externalConflict`, `failed`) with honest labels, scoped explanations and `acknowledgesDurability` true only after the storage barrier (staged-file flush, atomic install, parent-directory flush). Queued/timed work can never be displayed as saved.
-- `VaultCheckpointState` / `VaultRemoteState`: contract separation axes — `.rdm` archive construction is shown apart from local durability, and this build's missing sync is explicit ("Local only — no sync") rather than implied.
-- `SaveCoalescing` named measurements (250 ms edit debounce target, 500 ms bounded maximum after first dirty) — documented as scheduling values, not acknowledgement promises.
-- 10 focused tests: resolution/precedence matrix, label-honesty rules (only acknowledged states may say "Durable"/"Saved"), scoped explanations, checkpoint/remote separation wording, coalescing constants and a 40-edit continuous-typing bound simulation. Suite total is now 366 test functions in source.
+- `MarkdownReparseSession` (N02 incremental Markdown reparse): the reading preview splices only the changed region of a note per keystroke — line-level diff, bounded reparse window, blocks outside it reused with exact spans, content+occurrence identities and merged warnings. The result is always parse-equal to `MarkdownParser.parse` on the same source; every unprovable case falls back to a full parse.
+- Boundary proofs around the splice: 2-line lookahead window floor (setext underlines, table alignment rows), window-EOF proofs (`rule`/`listItem` can pair with a suffix line; blank-extension; fence-close scan), straddle growth so no old block tail is dropped, front-matter scan treated as document-wide (edits in the first 129 lines reparse from line 0; mid-document windows can never form metadata blocks), and metadata blocks never reused on the suffix side.
+- `MarkdownParser` internals restructured for the splice (`parseDetailed`/`project`/`splitLines`) with byte-identical public `parse`/`excerpt` output.
+- 23 focused tests: adversarial splice swallows, unclosed/closing fences, setext partner changes across the splice, front-matter formation/removal/instability regressions, the two-line lookahead hazard, edit-then-undo, duplicate-block renumbering, untouched-block id stability, empty/CRLF/emoji sources, budget fallbacks and a 4,000-block metrics bound. Suite total is now 389 test functions in source.
 
 ## Native source updated; unverified on Mac
 
-- Plain editor status derives from the model (`OpenNoteDocument.durability`) with barrier-scoped help text including the unverified power-loss caveat; the notes status bar shows the sync axis; the new-note sheet states that cancelling creates no file and no hidden draft.
-- Encrypted workspace shows the three axes as one summary (working-copy draft durability with confirmed/pending/editor-only states, generation-guarded so a superseded debounced write cannot confirm newer text; checkpoint state including failed-without-discard; no sync).
-- Fixed stale captions (launcher increment/memory-only/read-only wording, encrypted landing gate list, unlock notice). No SwiftUI/AppKit compile of these changes has run in this environment.
+- `MarkdownPreviewView` keeps one session per document and preview mode, runs `reparse` on a detached task, and rebuilds the session when excerpt mode toggles or the document changes. No SwiftUI/AppKit compile of these changes has run in this environment.
 
 ## Current evidence and limits
 
-- **The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures.** This increment's sources and tests pass full swift-syntax parsing (110 Swift files, 0 syntax failures).
+- **The recorded full Debug/Release run remains Increment 07's 333 tests with 0 failures.** This increment's sources and tests pass full swift-syntax parsing (112 Swift files, 0 syntax failures).
+- The reparse algorithm additionally survived 32,000 randomized edit-sequence equivalence checks via an out-of-repository Python mirror of the same algorithm — design evidence only; the harness is not shipped and does not replace the Swift run.
 - This development environment cannot install a Swift toolchain (network policy), so the new tests have not been executed here. They must pass `bash scripts/test-core.sh` in a Swift-capable environment before they count as evidence; unrun evidence is blocking, not a pass.
 - The storage barrier's APFS/power-loss behaviour is unverified; the labels claim exactly the fsync/exchange/parent-flush barrier and no more.
 - **No real microphone, recognition accuracy, AVFoundation/TCC lifecycle, live LLM, Metal, AppKit, APFS, accessibility/performance or independent security approval has run here.**

@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 43,
+  "estimated_percent": 44,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -18,7 +18,7 @@
     {
       "area": "Native editing, reading and accessibility",
       "weight": 15,
-      "credited_points": 7
+      "credited_points": 8
     },
     {
       "area": "Roadmap and connections",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 09: honest durability acknowledgement (N01 contract) — explicit seven-state VaultDurability model with barrier-scoped labels, checkpoint/sync separation axes, documented 250/500 ms coalescing measurements and 10 new state-model tests (366 total, new tests unrun here; recorded full run remains Increment 07's 333).",
-  "current_work": "Execution of the Increment 08/09 suites in a Swift-capable environment, then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage for the working slots and save barriers, and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
+  "last_completed": "Increment 10: incremental Markdown reparse (N02) — MarkdownReparseSession splices the changed region of the reading preview with parse-equal results, stable untouched block identities and full-parse fallback, plus 23 equivalence/metrics tests (389 total, new tests unrun here; recorded full run remains Increment 07's 333).",
+  "current_work": "Execution of the Increment 08/09/10 suites in a Swift-capable environment, then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage for the working slots and save barriers, and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
   "history": [
     {
       "increment": "04",
@@ -83,6 +83,11 @@
       "increment": "09",
       "estimate": 43,
       "basis": "Notes/storage area credited 13/20 for the tested-design durability acknowledgement model (honest seven-state labels, measured coalescing bounds, checkpoint/sync separation); no credit for Mac barrier/power-loss verification. New tests not yet executed in a Swift-capable environment do not raise the credit further."
+    },
+    {
+      "increment": "10",
+      "estimate": 44,
+      "basis": "Native editing/reading area credited 8/15 for the tested-design incremental Markdown reparse (parse-equal splicing with full-parse fallback, stable untouched identities); no credit for measured large-file performance on real hardware. New tests not yet executed in a Swift-capable environment do not raise the credit further."
     }
   ]
 }
