@@ -251,7 +251,7 @@ final class NoteLinkRepairTests: XCTestCase {
         let source = "# h [[A]]\n\n> q [[B]]\n\n- i [[C]]\n\n| h2 |\n| --- |\n| [[D]] |\n"
         var working = source
         for expected in ["A", "B", "C", "D"] {
-            let occurrence = NoteLinkRepair.occurrences(in: working)[0]
+            let occurrence = try XCTUnwrap(NoteLinkRepair.occurrences(in: working).first { $0.target == expected })
             XCTAssertEqual(occurrence.target, expected)
             let edit = try NoteLinkRepair.edit(replacing: occurrence, with: expected + "x", in: working)
             working = try NoteLinkRepair.apply(edit, to: working)
