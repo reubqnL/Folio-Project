@@ -73,7 +73,26 @@ Three defects were confirmed from the transcript and fixed in `2b4eee6`:
 
 Also added: **File → Open Recent**. `WorkspaceSession.recordProject` had been writing the last 50 projects to `knownProjectIdentities` since an earlier increment, but nothing ever read them back, so the feature existed only as dead storage. The folder is remembered as a **security-scoped bookmark** (`KnownProjectIdentity.bookmark`), not a path, because this build is sandboxed and a remembered path carries no permission to reopen; `folderPath` is display-only. `openRecentProject` reuses the same body as the open panel via a new `openProject(at:grant:mayCreate:)`, with `mayCreate: false` so Open Recent can never offer to initialise a project in a folder the user did not just choose, and a folder that can no longer be resolved is reported and dropped from the menu rather than opened somewhere else.
 
-**Not verified:** all of the above is unverified source. Nothing in `2b4eee6` has been compiled or run, and the character-by-character vertical text is still unreproduced in code — it has no confirmed cause yet, having been reported at every window size including fullscreen, which rules out the narrow-window wrapping the earlier round addressed.
+### The vertical text: root cause found (2026-09-29)
+
+The owner's screenshot showed a tall column of letters spelling **"Editor presentation"** immediately left of the Source/Preview/Split control. That identified the defect precisely, and it was not the narrow-window text wrapping the previous round had been chasing — which is why that round's `lineLimit(1)` additions never touched it.
+
+**A SwiftUI `Picker` draws its own label next to the control.** A segmented picker shows the title string beside the segments, and a menu picker shows it beside the popup button. Those labels are ordinary `Text`, so when the surrounding row is tighter than the sum of its fixed-width children, the label is the child that gets compressed — down to a few points — and SwiftUI wraps it at whatever character fits. The result is one or two letters per line: the reported vertical text.
+
+Five pickers sat in exactly that position and had no `labelsHidden()`:
+
+| Where | Picker | Label that wrapped |
+|---|---|---|
+| Notes editor header | `EditorPresentation` | "Editor presentation" |
+| Notes toolbar | `WorkspaceSection` | "Workspace section" |
+| Roadmap header | `RoadmapPresentation` | "Roadmap view" |
+| Roadmap timeline | window length | "Window" |
+| Connections header | neighbourhood depth | "Neighbourhood depth" |
+| Capture panel | `CaptureSourceKind` | "Input kind" |
+
+All six now carry `.labelsHidden()`, which removes the label from layout while keeping it as the control's accessibility title, and the self-describing chrome pickers gained a `.help()` string restating it. The pattern is the project's own precedent: the base commit already used `.labelsHidden()` on the roadmap's "Add prerequisite" picker — it had simply been missed everywhere the label was under pressure. The pickers whose labels are informative and have room (search scope, task editor, settings forms, capture review) keep their visible labels.
+
+**Not verified:** this is unverified source. The fix has not been compiled or run; it is based on one screenshot, and the owner will confirm on the next rebuild whether any vertical text remains.
 
 ## Evidence status
 

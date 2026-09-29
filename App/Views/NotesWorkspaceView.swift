@@ -57,6 +57,13 @@ struct NotesWorkspaceView: View {
                     Text("Connections").tag(WorkspaceSession.WorkspaceSection.connections)
                 }
                 .pickerStyle(.segmented)
+                // A segmented Picker draws its label beside the segments. In a
+                // tight row that label is compressed to a few points and wraps
+                // one character per line, which is what produced the vertical
+                // text in the editor header. The segments already say what the
+                // control is; `labelsHidden` keeps the title for VoiceOver while
+                // taking it out of the layout.
+                .labelsHidden()
                 .frame(width: 300)
                 .fixedSize()
                 .disabled(session.project == nil)
@@ -299,8 +306,15 @@ struct NotesWorkspaceView: View {
                         ForEach(EditorPresentation.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.segmented)
+                    // Without this the Picker's own label ("Editor
+                    // presentation") is drawn to the left of the segments. In a
+                    // squeezed row it was compressed to a couple of points and
+                    // wrapped one character per line, standing as a tall column
+                    // of letters beside Source/Preview/Split.
+                    .labelsHidden()
                     .frame(width: 240)
                     .fixedSize()
+                    .help("Source, Preview or Split for this note")
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)

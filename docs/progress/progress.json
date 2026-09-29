@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "First successful app run: scripts/run-app.sh built and launched the Folio app target, and the owner reports that resizing works, elements no longer disappear, and Notes/Roadmap/Connections switching works from both the toolbar and the sidebar. Fixed in 2b4eee6: CaptureController.clear() no longer claims a cancellation that never happened, two chrome labels (roadmap window date, connections legend) are pinned to one line, \"Follow cursor\" is relabelled \"Jump to Cursor\" with a confirmation since it is a one-shot action, and File > Open Recent was added using security-scoped bookmarks for a previously-open project list that was being recorded but never read. Unverified source: none of 2b4eee6 has been compiled or run.",
-  "current_work": "Reproduce and fix the remaining layout defect: character-by-character vertical text, reported as present in every area at any window size including fullscreen, so it is not the narrow-window wrapping the previous round addressed. The owner is providing a screenshot of the narrow window. After that: rebuild with scripts/run-app.sh and re-check the responsiveness checklist on FOLIO TEST, confirm the capture panel no longer reports a phantom cancellation, and verify Open Recent reopens FOLIO TEST from the File menu without the open panel.",
+  "last_completed": "Root cause of the character-by-character vertical text identified from the owner's screenshot and fixed: a SwiftUI Picker draws its own label beside the control, and in a row tighter than the sum of its fixed-width children that label is compressed to a few points and wraps at whatever character fits. The screenshot showed the column spelling 'Editor presentation' beside Source/Preview/Split. Six pickers now carry .labelsHidden() (editor presentation, workspace section, roadmap view, roadmap window, neighbourhood depth, capture input kind), following the project's own precedent -- the base commit already used .labelsHidden() on the roadmap's Add prerequisite picker. This also supersedes the previous round's assumption that the wrap was a narrow-window problem.",
+  "current_work": "Owner rebuilds with scripts/run-app.sh and reports whether any vertical text remains. Then: re-check the responsiveness checklist on FOLIO TEST, confirm the capture panel no longer reports a phantom cancellation, and verify File > Open Recent reopens FOLIO TEST without the open panel.",
   "history": [
     {
       "increment": "04",
@@ -118,6 +118,11 @@
       "increment": "13d",
       "estimate": 46,
       "basis": "No score change. The layout work now has its first runtime evidence (resizing and section switching confirmed working by the owner), which strengthens the same credit already counted, and one confirmed defect was found and fixed from that run. The dominant remaining defect — vertical character-by-character text at every window size — is still unreproduced, and the new fixes are unverified source, so no additional credit is claimed."
+    },
+    {
+      "increment": "13e",
+      "estimate": 46,
+      "basis": "No score change. The dominant remaining defect now has an identified cause and a targeted fix rather than a guess, which is progress in the same credited area, but the fix is unverified source and the item cannot be marked resolved until the owner confirms it on a rebuild."
     }
   ]
 }

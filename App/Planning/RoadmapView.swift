@@ -18,7 +18,7 @@ struct RoadmapView: View {
                 Picker("Roadmap view", selection: $planning.presentation) {
                     Text("Timeline").tag(RoadmapPresentation.timeline)
                     Text("Kanban").tag(RoadmapPresentation.kanban)
-                }.pickerStyle(.segmented).frame(width: 200).fixedSize()
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 200).fixedSize()
                 Spacer(minLength: 8)
                 Button { Task { await planning.undo() } } label: { Image(systemName: "arrow.uturn.backward") }.help("Undo roadmap change")
                     .disabled(!planning.history.canUndo || planning.hasUnwrittenChanges)
@@ -91,6 +91,7 @@ struct RoadmapView: View {
                 Button("Today") { planning.windowStart = .today() }
                 Spacer()
                 Picker("Window", selection: $planning.windowDays) { Text("6 weeks").tag(42); Text("12 weeks").tag(84); Text("Year").tag(365) }
+                    .labelsHidden()
                     .frame(width: 115)
             }.controlSize(.small).padding(12)
             HStack(alignment: .top, spacing: 0) {

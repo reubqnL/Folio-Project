@@ -17,7 +17,7 @@ struct ConnectionsView: View {
                 Spacer(minLength: 8)
                 Picker("Neighbourhood depth", selection: Binding(get: { graph.hops }, set: { graph.setHops($0) })) {
                     Text("1 hop").tag(1); Text("2 hops").tag(2)
-                }.pickerStyle(.segmented).frame(width: 145).fixedSize()
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 145).fixedSize()
                 Button { graph.showList.toggle() } label: { Label(graph.showList ? "Graph" : "List", systemImage: graph.showList ? "point.3.connected.trianglepath.dotted" : "list.bullet") }
                     .fixedSize()
                 Button { graph.rebuild() } label: { Image(systemName: "arrow.clockwise") }.help("Rebuild saved-note connections")

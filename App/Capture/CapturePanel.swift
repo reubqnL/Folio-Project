@@ -29,7 +29,7 @@ struct CapturePanel: View {
                     Picker("Input kind", selection: Binding(get: { capture.sourceKind }, set: { capture.editInput(capture.input, kind: $0) })) {
                         Text("Text").tag(CaptureSourceKind.typed)
                         Text("Transcript").tag(CaptureSourceKind.transcript)
-                    }.pickerStyle(.segmented).disabled(capture.isGenerating || capture.isApplying || session.speech.blocksCaptureChanges)
+                    }.pickerStyle(.segmented).labelsHidden().disabled(capture.isGenerating || capture.isApplying || session.speech.blocksCaptureChanges)
                     TextEditor(text: Binding(get: { capture.input }, set: { capture.editInput($0) }))
                         .font(.system(size: 13)).frame(minHeight: 130)
                         .disabled(capture.isGenerating || capture.isApplying || session.speech.blocksCaptureChanges)
