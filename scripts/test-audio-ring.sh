@@ -17,7 +17,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 else
   ASAN_OPTIONS=detect_leaks=1:halt_on_error=1
 fi
-export ASAN_OPTIONS UBSAN_OPTIONS=halt_on_error:1
+export ASAN_OPTIONS UBSAN_OPTIONS=halt_on_error=1
 python3 - "$SCRATCH/audio-ring-check" <<'PY'
 import json, subprocess, sys
 from pathlib import Path
