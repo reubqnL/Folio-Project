@@ -85,6 +85,8 @@ struct RoadmapView: View {
             HStack {
                 Button { planning.shiftWindow(-14) } label: { Image(systemName: "chevron.left") }
                 Text(planning.windowStart.description).font(.callout.monospacedDigit())
+                    .lineLimit(1)
+                    .fixedSize()
                 Button { planning.shiftWindow(14) } label: { Image(systemName: "chevron.right") }
                 Button("Today") { planning.windowStart = .today() }
                 Spacer()

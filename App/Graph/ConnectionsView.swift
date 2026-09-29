@@ -126,7 +126,11 @@ struct ConnectionsView: View {
                 }.clipped()
             }
             Text(graph.camera.threeDimensional ? "Drag to orbit · Shift-drag/two-finger scroll to pan · pinch to zoom" : "Drag/two-finger scroll to pan · pinch or Option-scroll to zoom · 3D is optional")
-                .font(.caption2).foregroundStyle(.secondary).padding(10)
+                .font(.caption2).foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help("Drag or two-finger scroll to pan. Pinch, or Option-scroll, to zoom.")
+                .padding(10)
         }
     }
     private var labelNodes: [GraphNode] {

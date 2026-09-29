@@ -20,7 +20,10 @@ final class CaptureController {
     var showingComposer = false
     var showingContextPicker = false
     var availability: CaptureProviderAvailability = .unavailable("Not checked. No request has been made.")
-    var status = "Capture stays local and unapplied until you review it."
+    /// The panel's resting message. `clear()` restores it, so a fresh project or
+    /// note never inherits a status left over from earlier work.
+    static let idleStatus = "Capture stays local and unapplied until you review it."
+    var status = CaptureController.idleStatus
     var failure: String?
     var preparedRequest: PreparedCapture?
     var undoReceipt: CaptureUndoReceipt?
@@ -134,9 +137,20 @@ final class CaptureController {
         status = "Cancellation requested. Late output will not be applied."
         if hadActiveRequest { Task { @MainActor [weak self] in await self?.checkAvailability() } }
     }
+    /// Resets the panel when the target changes (a different note, or a
+    /// different project).
+    ///
+    /// `cancel()` sets its own status message, and that message claims a request
+    /// was cancelled. Calling it unconditionally here made merely opening a
+    /// project report "Cancellation requested. Late output will not be applied."
+    /// for a capture that was never started. The cancellation status is
+    /// therefore only kept when a request really was in flight.
     func clear() {
-        cancel(); draft = nil; proposal = nil; preparedRequest = nil; undoReceipt = nil
+        let hadActiveRequest = activeRequestID != nil || isGenerating
+        cancel()
+        draft = nil; proposal = nil; preparedRequest = nil; undoReceipt = nil
         targetTitle = ""; appliedDraftRevision = nil; failure = nil; resetReview()
+        if !hadActiveRequest { status = CaptureController.idleStatus }
     }
     func targetEdited(binding: CaptureDocumentBinding, generation: Int) {
         guard let expected = proposal?.target ?? preparedRequest?.target, expected.binding == binding else { return }
