@@ -19,10 +19,12 @@ public enum EncryptedIndexError: Error, LocalizedError, Equatable, Sendable {
     }
 }
 
-/// Encrypted-project v1 derived index: memory-only by design. It contains no
-/// SQLite file, WAL, temp file, thumbnail or persistent plaintext cache. The
-/// actor's stored Data is erased on close where possible; this is not OS-level
-/// memory secrecy. A reviewed encrypted persistent index can replace this later.
+/// Encrypted-project v1 derived index: memory-resident by design. It contains
+/// no SQLite file, WAL, temp file, thumbnail or persistent plaintext cache.
+/// The actor's stored Data is erased on close where possible; this is not
+/// OS-level memory secrecy. Persistence happens only through the sealed
+/// `RDMWorkingStore` index cache, which restores into this memory-resident
+/// form after authentication and falls back to a full rebuild.
 public actor EncryptedWorkingIndex {
     public nonisolated let projectID: UUID
     public nonisolated let persistentPlaintextStorage = false

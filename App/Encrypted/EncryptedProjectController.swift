@@ -145,7 +145,7 @@ final class EncryptedProjectController {
             self.draftNoteID = nil
             self.draftPath = ""
             self.draftMarkdown = ""
-            notice = "Encrypted checkpoint written and memory-only search refreshed."
+            notice = "Encrypted checkpoint written and search refreshed."
             await search()
         } catch {
             // Keep the draft visible for review. A stale or invalid checkpoint

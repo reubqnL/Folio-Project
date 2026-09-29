@@ -10,7 +10,7 @@ overview, repository map and build instructions.
 | Document | Contents |
 |---|---|
 | [`native-development.md`](native-development.md) | Native build, verification commands, open Mac gates, privacy boundaries and the state of the encrypted container. This was the package `README.md` before the reorganisation. |
-| [`CHANGELOG.md`](CHANGELOG.md) | Increment history, newest first (07 is current). |
+| [`CHANGELOG.md`](CHANGELOG.md) | Increment history, newest first (08 is current). |
 
 ### Architecture and security contracts
 
@@ -26,7 +26,7 @@ expected to guarantee.
 | [`architecture/CAPTURE-SECURITY-CONTRACT.md`](architecture/CAPTURE-SECURITY-CONTRACT.md) | Model capture: explicit context, review before apply, stale-edit protection |
 | [`architecture/SPEECH-SECURITY-CONTRACT.md`](architecture/SPEECH-SECURITY-CONTRACT.md) | On-device voice capture consent, lifecycle and handoff |
 | [`architecture/RDM-SECURITY-CONTRACT.md`](architecture/RDM-SECURITY-CONTRACT.md) | Threat model for the encrypted container |
-| [`architecture/ENCRYPTED-RDM-CONTRACT.md`](architecture/ENCRYPTED-RDM-CONTRACT.md) | Encrypted `.rdm` format, KDF, archive, checkpoint and working index |
+| [`architecture/ENCRYPTED-RDM-CONTRACT.md`](architecture/ENCRYPTED-RDM-CONTRACT.md) | Encrypted `.rdm` format, KDF, archive, checkpoint, working store and index cache |
 
 ### Planning and decisions
 

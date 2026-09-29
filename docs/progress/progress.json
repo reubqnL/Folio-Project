@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Increment 07: authenticated .rdm archive/passphrase/recovery/atomic checkpoint, bounded memory-only encrypted working index and session boundary. 333 Debug and Release tests pass, including 56 focused encrypted/archive/checkpoint/working-index/hostile-input/session tests. Mac CryptoKit/APFS/working-index integration and independent review remain unverified.",
-  "current_work": "Native encrypted-project UI/keychain/recovery flows, non-destructive plain-to-encrypted copy and persistent encrypted index/cache design; Mac CryptoKit/APFS/native UI/security validation remain open.",
+  "last_completed": "Increment 08: persistent encrypted working storage \u2014 chained two-slot draft records with fail-closed stale classification and reviewed resolution, encrypted derived-index cache bound to its archive snapshot, session draft APIs and native draft staging/restore/review wiring. 23 focused tests added (356 total) whose execution still has to run via scripts/test-core.sh; all 108 Swift files pass swift-syntax parsing. The last full Debug/Release run remains Increment 07's 333 tests with 0 failures.",
+  "current_work": "Execution of the Increment 08 suite in a Swift-capable environment, then native keychain/recovery UX completion, editor/undo/accessibility and large-vault gates, fault/power-loss coverage and Mac CryptoKit/APFS validation; collaboration and installer remain out of scope.",
   "history": [
     {
       "increment": "04",
@@ -73,6 +73,11 @@
       "increment": "07",
       "estimate": 41,
       "basis": "Encrypted area credited 1/13 for tested primitive/archive/checkpoint foundation; no credit for Mac parity, persistent encrypted working store, Keychain, fuzzing or independent review."
+    },
+    {
+      "increment": "08",
+      "estimate": 42,
+      "basis": "Encrypted area credited 2/13 for the tested-design persistent encrypted working store and index cache with fail-closed review semantics; no credit for Mac parity, fault/power-loss coverage, Keychain slots or independent review. New tests not yet executed in a Swift-capable environment do not raise the credit further."
     }
   ]
 }
