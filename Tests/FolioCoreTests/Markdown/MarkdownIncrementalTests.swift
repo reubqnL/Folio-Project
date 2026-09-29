@@ -201,7 +201,11 @@ final class MarkdownIncrementalTests: XCTestCase {
         let edited = splice(text, replacing: range(of: "same", in: text), with: "diff")
         let result = session.reparse(edited)
         XCTAssertEqual(result.document, MarkdownParser.parse(edited))
-        XCTAssertEqual(result.document.blocks.map(\.kind), [.paragraph, .paragraph, .paragraph])
+        XCTAssertEqual(result.document.blocks.count, 3)
+        XCTAssertTrue(result.document.blocks.allSatisfy { block in
+            if case .paragraph = block.kind { return true }
+            return false
+        })
     }
 
     func testEditThenUndoRestores() {
