@@ -123,6 +123,19 @@ The first pass fixed one shared-state bug and some missing labels. Reading the r
 
 **Not verified:** unverified source, like the pass above.
 
+### The section switcher that "clicks but does nothing" — second report (2026-09-29)
+
+The owner reported the toolbar's Notes/Roadmap/Connections control accepting a click and changing nothing, adding *"does it randomly choose when to work?"* after having previously reported it working. Two facts point at the control rather than at the section state:
+
+1. **The sidebar performs the identical switch with plain `Button`s and has never been reported broken.** The toolbar used a segmented `Picker`.
+2. **A regression was introduced in `9f5096f`.** The base commit gave the Picker a stiff `.frame(width: 275)`. The rewrite added `.fixedSize()` *after* `.frame(width: 300)`, and `.fixedSize()` discards that width in favour of the control's ideal size. Inside an AppKit toolbar that is precisely the situation where the drawn control and its hit region stop agreeing — a click animates but lands nowhere useful.
+
+The state model is not implicated: `workspaceSection` is a plain stored property, `setWorkspaceSection` is unconditional, the Picker's only disablement is `project == nil`, and every other write to the property happens on deliberate navigation. In particular `refreshProject` — the one background path that runs while the user is reading — never touches the section, and `selectNote` is called only from deliberate navigation, not from the file-observation refresh.
+
+**Change:** the toolbar now uses the pattern already proven in the sidebar — three plain `Button`s in an `HStack`, with a filled background and the `.isSelected` accessibility trait marking the current section. There is no selection binding to fall out of step, the click target is the label itself, and the group carries an explicit width rather than `fixedSize()`.
+
+**Not verified:** unverified source. This is a hypothesis-driven change and the owner's next report decides it: if the buttons still fail, the fault is outside the control and the diagnostic questions in the handover distinguish a swallowed click from a disabled control from a section that changes and reverts.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.

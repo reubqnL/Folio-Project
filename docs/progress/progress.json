@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Second polish pass on the existing screens, targeting one class of defect: a control that accepts input and then says nothing about what happened to it. Six fixed. GraphController.configure never reset listFilter, so the Connections filter survived a project switch and silently narrowed the next project's list. The Connections list, the note search sheet, the command palette, the sidebar note list and the kanban board all rendered an unexplained empty state; a failed timeline projection rendered nothing at all because `if let projection = try?` had no else branch; and the board's column headers counted unfiltered items while the columns showed filtered ones. All are unverified source.",
-  "current_work": "Encrypted .rdm remains the owner's stated next priority after the polish work. Outstanding: the owner rebuilds and confirms the twice-polished screens, and the original report's remaining checklist items are walked (Split in a normal window, clicking controls after resizing to the floor, and the create/edit/save/reopen/search regression set). Live microphone and speech testing is unblocked -- its gate was 'not until the UI is stable'.",
+  "last_completed": "Fixed the toolbar's Notes/Roadmap/Connections switch, reported for the second time as accepting a click and changing nothing. Two findings: the sidebar performs the same switch with plain Buttons and has never been reported broken, and 9f5096f had added .fixedSize() after .frame(width: 300), which discards the explicit width and hands the control its ideal size inside an AppKit toolbar -- exactly where a drawn control and its hit region stop agreeing. The state model is not implicated: workspaceSection is a plain stored property, setWorkspaceSection is unconditional, and no background path (including the file-observation refresh) writes to it. The toolbar now uses three plain Buttons with a selected background and the isSelected trait, mirroring the sidebar pattern.",
+  "current_work": "Awaiting the owner's rebuild and report on the toolbar section buttons, with diagnostic questions to distinguish a swallowed click from a disabled control from a section that changes and reverts. After that, the owner's stated priority is the encrypted .rdm area, and the original report's remaining checklist items (Split in a normal window, clicking controls after resizing to the floor, and create/edit/save/reopen/search) are still unwalked.",
   "history": [
     {
       "increment": "04",
@@ -138,6 +138,11 @@
       "increment": "13h",
       "estimate": 47,
       "basis": "No score change. These are defects in already-credited areas rather than new capability, and they are unverified source. The layout credit stands on the owner's runtime confirmation recorded in 13f."
+    },
+    {
+      "increment": "13i",
+      "estimate": 47,
+      "basis": "No score change. A defect in an already-credited area was diagnosed and changed, but the change is unverified source and the defect was reported as intermittent, so only the owner's next report can confirm it."
     }
   ]
 }

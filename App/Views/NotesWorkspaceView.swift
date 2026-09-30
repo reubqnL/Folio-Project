@@ -56,27 +56,19 @@ struct NotesWorkspaceView: View {
                 }
                 .help("Return to the Folio launcher")
             }
+            // Three explicit buttons rather than a segmented Picker.
+            //
+            // The segmented Picker used here was reported twice as accepting a
+            // click and changing nothing. Two things pointed at it: the sidebar
+            // performs the identical switch with plain `Button`s and has never
+            // misbehaved, and the base commit's Picker was given a stiff
+            // `.frame(width: 275)` while this one added `.fixedSize()`, which
+            // discards that width and hands the control its ideal size — inside
+            // an AppKit toolbar that is exactly the kind of layout whose hit
+            // region stops matching what is drawn. Buttons are the pattern that
+            // already works in this app, so the toolbar now uses it too.
             ToolbarItem(placement: .principal) {
-                Picker("Workspace section", selection: Binding(
-                    get: { session.workspaceSection },
-                    set: { session.setWorkspaceSection($0) }
-                )) {
-                    Text("Notes").tag(WorkspaceSession.WorkspaceSection.notes)
-                    Text("Roadmap").tag(WorkspaceSession.WorkspaceSection.roadmap)
-                    Text("Connections").tag(WorkspaceSession.WorkspaceSection.connections)
-                }
-                .pickerStyle(.segmented)
-                // A segmented Picker draws its label beside the segments. In a
-                // tight row that label is compressed to a few points and wraps
-                // one character per line, which is what produced the vertical
-                // text in the editor header. The segments already say what the
-                // control is; `labelsHidden` keeps the title for VoiceOver while
-                // taking it out of the layout.
-                .labelsHidden()
-                .frame(width: 300)
-                .fixedSize()
-                .disabled(session.project == nil)
-                .help("Switch between Notes, Roadmap and Connections")
+                sectionSwitcher
             }
             // Only three toolbar items on the right. The previous ten could not
             // fit a normal window, and AppKit hid the overflow behind a chevron;
@@ -87,6 +79,56 @@ struct NotesWorkspaceView: View {
                 newNoteButton
                 moreMenu
             }
+        }
+    }
+
+    // MARK: - Section switcher
+
+    /// Mirrors the sidebar's three section buttons, in the toolbar.
+    ///
+    /// Each is a plain `Button`, so the click target is the label itself and
+    /// there is no selection binding to fall out of step with the model. The
+    /// current section is marked with a filled background and the `isSelected`
+    /// accessibility trait, so the state is readable as well as visible.
+    private var sectionSwitcher: some View {
+        HStack(spacing: 4) {
+            ForEach(WorkspaceSession.WorkspaceSection.allCases, id: \.self) { section in
+                let selected = session.workspaceSection == section
+                Button { session.setWorkspaceSection(section) } label: {
+                    Label(sectionTitle(section), systemImage: sectionSymbol(section))
+                        .font(.callout)
+                        .lineLimit(1)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .background(selected ? FolioStyle.gold.opacity(0.9) : Color.clear)
+                        .foregroundStyle(selected ? Color.black : Color.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(sectionTitle(section))
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+                .help(selected ? "\(sectionTitle(section)) is showing" : "Show \(sectionTitle(section))")
+                .disabled(session.project == nil)
+            }
+        }
+        .frame(width: 330)
+    }
+
+    private func sectionTitle(_ section: WorkspaceSession.WorkspaceSection) -> String {
+        switch section {
+        case .notes: "Notes"
+        case .roadmap: "Roadmap"
+        case .connections: "Connections"
+        }
+    }
+
+    private func sectionSymbol(_ section: WorkspaceSession.WorkspaceSection) -> String {
+        switch section {
+        case .notes: "doc.text"
+        case .roadmap: "calendar"
+        case .connections: "point.3.connected.trianglepath.dotted"
         }
     }
 
