@@ -56,12 +56,53 @@ final class EncryptedProjectController {
     @ObservationIgnored private var draftNoteID: UUID?
     @ObservationIgnored private var draftStageTask: Task<Void, Never>?
 
+    /// Every unsaved draft the encrypted working copy holds, newest first.
+    ///
+    /// The editor holds one draft at a time, but the working store holds up to
+    /// 256 of them, and `restoreWorkingState()` returns all of them. Before
+    /// this list existed the UI restored the newest into its single slot and
+    /// reported that others were preserved without offering any way to reach
+    /// them — and because discarding a draft removes it from the store, the
+    /// only way to reach an older one was to destroy the newer ones in front
+    /// of it. This is the index that makes all of them reachable.
+    var preservedDrafts: [RDMWorkingDraft] = []
+
     var isUnlocked: Bool { phase == .unlocked || phase == .recoveryReview }
     var hasOpenSession: Bool { session != nil }
     var selectedNote: RDMNote? { project?.notes.first { $0.id == selectedNoteID } }
     var editingNote: RDMNote? { project?.notes.first { $0.id == editingNoteID } }
     var hasDraft: Bool { isNewDraft || editingNoteID != nil }
     var displayName: String { project?.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? "Encrypted project" }
+
+    /// The identity of the draft currently in the editor, if one is open.
+    var openDraftID: UUID? { editingNoteID ?? draftNoteID }
+
+    /// Every preserved draft, newest first.
+    ///
+    /// The draft open in the editor is included. The list is the complete set
+    /// of what the working copy holds, so the count in its header always
+    /// matches the rows beneath it, and no draft is ever silently absent from
+    /// a list that claims to show them.
+    var preservedDraftsNewestFirst: [RDMWorkingDraft] {
+        preservedDrafts.sorted { ($0.updatedAt, $0.id.uuidString) > ($1.updatedAt, $1.id.uuidString) }
+    }
+
+    /// Preserved drafts other than the one in the editor: the ones that
+    /// previously could not be reached at all. Drives whether the list is
+    /// worth showing, since a list holding only the open draft adds nothing.
+    var draftsPendingReview: [RDMWorkingDraft] {
+        preservedDrafts.filter { $0.id != openDraftID }
+    }
+
+    /// Non-nil when switching drafts would drop text.
+    ///
+    /// A draft's text is safe to leave only once it is confirmed in the
+    /// encrypted working copy. Until then the editor holds the only copy, so
+    /// opening a different draft is refused rather than silently losing it.
+    var draftSwitchBlockedReason: String? {
+        guard hasDraft, draftHasUnsavedChanges, !draftStagedConfirmed else { return nil }
+        return "This draft has text that is not yet confirmed in the encrypted working copy. Approve a checkpoint, or discard it, before opening another draft."
+    }
 
     /// Initial placeholder path for a new draft; empty content with this path
     /// is an untouched draft with nothing to lose.
@@ -160,8 +201,19 @@ final class EncryptedProjectController {
         notice = "Encrypted draft discarded; the authenticated project is unchanged."
         if let discarded, let session {
             Task { [weak self] in
-                do { try await session.discardDraft(id: discarded) }
-                catch { self?.notice = "The draft was cleared here, but its local working copy needs review before it can be removed." }
+                do {
+                    try await session.discardDraft(id: discarded)
+                    guard let self else { return }
+                    await self.refreshPreservedDrafts()
+                    // Other unsaved drafts may still be preserved. Say so, and
+                    // say where they are, rather than leaving them invisible.
+                    let remaining = self.preservedDrafts.count
+                    if remaining > 0 {
+                        self.notice = "Encrypted draft discarded. \(remaining) preserved draft(s) remain; use Preserved drafts to open or discard them."
+                    }
+                } catch {
+                    self?.notice = "The draft was cleared here, but its local working copy needs review before it can be removed."
+                }
             }
         }
     }
@@ -187,7 +239,12 @@ final class EncryptedProjectController {
             }
             do {
                 try await session.stageDraft(.init(id: draftID, path: path, markdown: markdown, updatedAt: stamped))
-                if self.draftStageGeneration == generation { self.draftStagedConfirmed = true }
+                if self.draftStageGeneration == generation {
+                    self.draftStagedConfirmed = true
+                    // The staged copy is now in the working store, so the
+                    // preserved list has to include it.
+                    await self.refreshPreservedDrafts()
+                }
             } catch RDMError.recoveryRequired {
                 self.needsWorkingReview = true
                 self.notice = "Local working copies need review before Folio can save more unsaved drafts."
@@ -231,6 +288,7 @@ final class EncryptedProjectController {
             self.draftPath = ""
             self.draftMarkdown = ""
             notice = "Encrypted checkpoint written and search refreshed."
+            await refreshPreservedDrafts()
             await search()
         } catch {
             // Keep the draft visible for review. A stale or invalid checkpoint
@@ -391,19 +449,23 @@ final class EncryptedProjectController {
     }
 
     /// Offers the most recent unsaved draft from the encrypted local working
-    /// copy. Additional drafts stay preserved until reviewed or discarded.
+    /// copy, and records every preserved draft so the rest stay reachable.
     private func restoreLocalDrafts() async {
         guard let session else { return }
         do {
             switch try await session.restoreWorkingState() {
             case .empty:
-                break
+                preservedDrafts = []
             case .current(let state):
+                preservedDrafts = state.drafts
                 if let message = presentRestoredDrafts(state) {
                     notice = message
                 }
             case .stale(let state, let reason):
                 needsWorkingReview = true
+                if let state {
+                    preservedDrafts = state.drafts
+                }
                 var message = "Local working copies need review: \(reason)"
                 if let state, let restored = presentRestoredDrafts(state) {
                     message += " " + restored
@@ -415,9 +477,78 @@ final class EncryptedProjectController {
         }
     }
 
-    /// Populates the single draft slot with the newest preserved draft.
-    /// Returns nil when the state carries no drafts.
+    /// Re-reads the full preserved-draft list from the encrypted working copy.
+    ///
+    /// Called after anything that changes it. A stale or unreadable result
+    /// deliberately leaves the last known list in place rather than replacing
+    /// it with an empty one: showing no drafts implies the drafts are gone,
+    /// which is exactly the wrong thing to say when the truth is that Folio
+    /// cannot currently read them.
+    func refreshPreservedDrafts() async {
+        guard let session, isUnlocked else {
+            preservedDrafts = []
+            return
+        }
+        do {
+            switch try await session.restoreWorkingState() {
+            case .empty:
+                preservedDrafts = []
+            case .current(let state):
+                preservedDrafts = state.drafts
+            case .stale:
+                needsWorkingReview = true
+            }
+        } catch {
+            // Keep the last known list.
+        }
+    }
+
+    /// Opens one of the preserved drafts in the editor.
+    func openPreservedDraft(_ id: UUID) {
+        guard isUnlocked, let draft = preservedDrafts.first(where: { $0.id == id }) else { return }
+        // Refuse rather than replace: the open draft may hold the only copy of
+        // its text.
+        guard draftSwitchBlockedReason == nil else { return }
+        draftStageTask?.cancel()
+        draftStageTask = nil
+        isStagingDraft = false
+        draftStagedConfirmed = true
+        checkpointFailure = nil
+        errorMessage = nil
+        draftNoteID = draft.id
+        if project?.notes.contains(where: { $0.id == draft.id }) == true {
+            editingNoteID = draft.id
+            isNewDraft = false
+        } else {
+            editingNoteID = nil
+            isNewDraft = true
+        }
+        draftPath = draft.path
+        draftMarkdown = draft.markdown
+        notice = "Opened a preserved draft from the encrypted working copy. It still joins the project only when you approve a checkpoint."
+    }
+
+    /// Removes one preserved draft from the encrypted working copy.
+    ///
+    /// This is the only way drafts are removed other than checkpointing them,
+    /// so it is offered per draft and never in bulk.
+    func discardPreservedDraft(_ id: UUID) async {
+        guard isUnlocked, let session else { return }
+        do {
+            try await session.discardDraft(id: id)
+            notice = "Preserved draft discarded; the authenticated project is unchanged."
+            await refreshPreservedDrafts()
+        } catch {
+            errorMessage = error.localizedDescription
+            await refreshPreservedDrafts()
+        }
+    }
+
+    /// Populates the draft editor with the newest preserved draft, and records
+    /// the full list so the others stay reachable. Returns nil when the state
+    /// carries no drafts.
     private func presentRestoredDrafts(_ state: RDMWorkingState) -> String? {
+        preservedDrafts = state.drafts
         guard let newest = state.drafts.max(by: { ($0.updatedAt, $0.id.uuidString) < ($1.updatedAt, $1.id.uuidString) }) else { return nil }
         draftStageTask?.cancel()
         draftStageTask = nil
@@ -435,7 +566,7 @@ final class EncryptedProjectController {
         draftPath = newest.path
         draftMarkdown = newest.markdown
         let extra = state.drafts.count > 1
-            ? " \(state.drafts.count - 1) more unsaved draft(s) stay preserved in the encrypted working copy."
+            ? " \(state.drafts.count - 1) more unsaved draft(s) are preserved; use Preserved drafts to open or discard them."
             : ""
         return "Restored your most recent unsaved draft from the encrypted local working copy." + extra
     }
@@ -495,6 +626,9 @@ final class EncryptedProjectController {
         isNewDraft = false
         isCheckpointing = false
         needsWorkingReview = false
+        // The drafts themselves stay encrypted in the working copy; only the
+        // in-memory index of them is dropped with the rest of the plaintext.
+        preservedDrafts = []
         query = ""
         pendingRecoveryCode = nil
         rememberPassphrase = false

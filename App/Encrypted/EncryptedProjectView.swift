@@ -1,4 +1,5 @@
 import SwiftUI
+import FolioCore
 
 struct EncryptedProjectView: View {
     @Bindable var controller: EncryptedProjectController
@@ -194,6 +195,71 @@ struct EncryptedProjectView: View {
         .padding(32).frame(maxWidth: 700, maxHeight: .infinity, alignment: .center)
     }
 
+    /// The drafts the encrypted working copy is holding that are not the one
+    /// open in the editor.
+    ///
+    /// Without this the store's other drafts were unreachable: Folio said more
+    /// were preserved and offered no way to see, open or discard them, and
+    /// because discarding removes a draft from the store, the only way to reach
+    /// an older one was to destroy the newer ones first.
+    private var preservedDraftsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Label("Preserved drafts (\(controller.preservedDrafts.count))", systemImage: "doc.on.doc")
+                    .font(.callout.weight(.semibold))
+                Spacer()
+            }
+            Text("Unsaved drafts held in the encrypted local working copy. The editor shows one at a time; open another to switch to it. Each joins the project only when you approve a checkpoint.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            ForEach(controller.preservedDraftsNewestFirst) { draft in
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(draft.path).font(.callout.weight(.medium))
+                            .lineLimit(1).truncationMode(.middle)
+                        Text(preservedDraftSummary(draft))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    if draft.id == controller.openDraftID {
+                        // Shown so the list is the complete set, but it is
+                        // already open: there is nothing to switch to and
+                        // discarding it is what Discard in the editor does.
+                        Label("In editor", systemImage: "pencil")
+                            .font(.caption2).foregroundStyle(FolioStyle.gold)
+                    } else {
+                        Button("Open") { controller.openPreservedDraft(draft.id) }
+                            .disabled(controller.draftSwitchBlockedReason != nil)
+                        // Removing a draft is a write to the working store, and
+                        // the store refuses writes until inconsistent copies
+                        // are reviewed. Disable rather than fail with an error.
+                        Button("Discard") { Task { await controller.discardPreservedDraft(draft.id) } }
+                            .disabled(controller.needsWorkingReview)
+                    }
+                }
+                .padding(10)
+                .background(FolioStyle.editor)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(.white.opacity(0.08)))
+            }
+            if let reason = controller.draftSwitchBlockedReason {
+                Text(reason)
+                    .font(.caption).foregroundStyle(FolioStyle.gold)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.1)))
+    }
+
+    private func preservedDraftSummary(_ draft: RDMWorkingDraft) -> String {
+        let characters = draft.markdown.count
+        let saved = Date(timeIntervalSince1970: Double(draft.updatedAt) / 1000)
+        return "\(characters) character(s) · last written \(saved.formatted(date: .abbreviated, time: .shortened))"
+    }
+
     private var unlockedView: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -215,6 +281,9 @@ struct EncryptedProjectView: View {
             if controller.needsWorkingReview {
                 Button("Review local working copies") { Task { await controller.resolveWorkingStateNow() } }
                     .buttonStyle(.bordered)
+            }
+            if !controller.draftsPendingReview.isEmpty {
+                preservedDraftsCard
             }
             HStack {
                 TextField("Search encrypted notes in memory", text: $controller.query)

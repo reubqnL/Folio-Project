@@ -188,6 +188,28 @@ The toolbar has the room. At the 1040pt minimum window width the leading Launche
 
 **Not verified:** unverified source. Neither the widths nor the cursor behaviour can be exercised here.
 
+## Increment 14 — encrypted drafts were stored but unreachable
+
+**The defect.** An open encrypted project's unsaved drafts are held in an encrypted local working store that keeps up to 256 of them, and `RDMProjectSession.restoreWorkingState()` returns all of them. The UI restored exactly one — the newest — into its single editor slot and said *"N more unsaved draft(s) stay preserved in the encrypted working copy"* without offering any way to see, open or discard them.
+
+The consequence was worse than a missing feature. `discardDraft(id:)` removes a draft from the store, and the only control that reached it was the editor's **Discard**, which acted on whatever was open. So the only route to an older preserved draft was to destroy the newer ones standing in front of it, one at a time. Three unsaved drafts meant three recoveries, each one paid for by deleting the draft above it. The store was doing exactly what it was designed to do; nothing in the interface could reach the older two.
+
+This is the item the encrypted contract already listed as outstanding — *"multi-draft review UX validation remains"*.
+
+**The core guarantee was already proven.** `EncryptedWorkingStoreTests` and `RDMProjectSessionTests` cover the mechanism this change relies on: `testDiscardingDraftsClearsWorkingCopiesWhenNoneRemain` stages two drafts, discards one by id, and asserts the other is exactly what remains; `testChainedGenerationsRemainCurrent` covers generation chaining. The change is therefore a matter of surfacing a tested guarantee, not of adding a new one, and no new core test is required to justify it.
+
+**The change.** `EncryptedProjectController` keeps `preservedDrafts`, the full list from the working store, refreshed after every operation that alters it: unlock, each confirmed staging write, checkpoint, discard, and reviewed resolution. `EncryptedProjectView` renders a **Preserved drafts (N)** card listing every preserved draft, newest first, with its path, character count and last-written time.
+
+- The draft currently in the editor is listed too, marked *In editor*, rather than filtered out. The list is then the complete set the working copy holds, so the count in its header always matches the rows beneath it — a list that claims to show the drafts and silently omits one is how this defect started.
+- **Open** loads another draft into the editor. It is refused while the open draft holds text that is not yet confirmed in the working copy, with the reason shown, because until that write confirms the editor holds the only copy.
+- **Discard** removes one draft from the working store, disabled while inconsistent copies await review, since the store refuses writes until then and a button that always fails is worse than one that explains itself.
+- A stale or unreadable working state deliberately leaves the last known list in place instead of replacing it with an empty one. Showing nothing would imply the drafts are gone, which is the opposite of the truth when the real situation is that Folio cannot currently read them.
+- The restored-draft notice and the discard notice now say where the remaining drafts are instead of only that they exist.
+
+**A limitation deliberately left in place:** *New encrypted note* is still disabled while a draft is open. That is existing behaviour, and changing it would mean deciding what happens to unconfirmed editor text — a question this change does not need to answer. Drafts are now reachable, which was the defect; starting a second draft alongside the first is a separate decision.
+
+**Not verified:** unverified source. The encrypted workspace cannot be compiled or exercised in this environment, and no encrypted project has been opened on real hardware. The evidence for the underlying mechanism is the existing SwiftPM test suite; the evidence for this interface layer is the owner's next build.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.

@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 48,
+  "estimated_percent": 49,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -33,7 +33,7 @@
     {
       "area": "Encrypted .rdm and key recovery",
       "weight": 13,
-      "credited_points": 2
+      "credited_points": 3
     },
     {
       "area": "E2EE collaboration",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "The equal-width segments from 13k were reported still wrong: the owner sees 'Connections' too close to its edge rather than three segments that match. segmentDistribution = .fillEqually equalises segments to the widest segment's total width, which already includes the stock control's padding, so all three measured the same while only Connections sat tight against its own edges -- equal widths, unequal-looking padding. The widths are now set outright: equalizeSegmentWidths measures every label with the control's font, takes the widest, and sets each segment to widest + labelPadding x 2 from a single constant at the top of the file. The cursor and tooltip changes from 13k were confirmed working by the owner. Unverified source.",
-  "current_work": "Owner rebuilds to check the segment spacing: whether the three segments now read as the same size with even padding. The bar is wider than the per-label original because it is equalised to the longest word, and the labelPadding constant at the top of App/Views/SectionSegmentedControl.swift is the one number that changes it if it reads as too wide. After that the original report's unwalked checklist items (Split in a normal window, clicking controls after resizing to the floor, the create/edit/save/reopen/search regression set), and the owner's stated next priority is the encrypted .rdm area.",
+  "last_completed": "Began the encrypted .rdm area, the owner's stated next priority. The first defect found is in the interface rather than the container: the encrypted working store holds up to 256 unsaved drafts and RDMProjectSession returns all of them, but the UI restored only the newest into its single editor slot and reported that others were preserved with no way to reach them. Because discarding removes a draft from the store, the only route to an older preserved draft was to destroy the newer ones in front of it. The controller now keeps the full preserved list, refreshed after unlock, staging, checkpoint, discard and resolution, and the unlocked view renders a Preserved drafts card listing every draft with its path, size and last-written time, offering Open and Discard per draft. The draft in the editor is listed and marked rather than filtered, so the header count always matches the rows. Opening is refused while the editor holds text not yet confirmed in the working copy, and Discard is disabled while inconsistent copies await review. The mechanism relied on is already covered by testDiscardingDraftsClearsWorkingCopiesWhenNoneRemain, so no new core test was needed. Unverified source.",
+  "current_work": "Owner rebuilds. The encrypted workspace changes are unverified source and the encrypted UI cannot be exercised in this environment, so the next step is a build plus, when the owner is willing, opening a throwaway .rdm project - explicitly not real data, since the container's own contract still says no sensitive project should be entrusted to it. Deliberately left unchanged: New encrypted note is still disabled while a draft is open. Still outstanding in the encrypted area per its contract: Mac CryptoKit parity, power-loss and APFS matrices, fuzz/sanitizer testing of the C parsers, independent cryptographic review, and Keychain device slots with recovery rotation. Also still unwalked: the original report's checklist items and the nine polish fixes from the two earlier passes.",
   "history": [
     {
       "increment": "04",
@@ -158,6 +158,16 @@
       "increment": "13l",
       "estimate": 48,
       "basis": "No score change. This is a second correction to a control already credited in 13k, and it is unverified source; the credit for the switcher working stands on the owner's runtime confirmation recorded there, not on this. The nine polish fixes from the earlier passes remain unexercised."
+    },
+    {
+      "increment": "13m",
+      "estimate": 48,
+      "basis": "No score change. The equal-width segments were confirmed correct, which strengthens the credit already granted in 13k for the switcher rather than adding a new one. Recorded as a close-out of the Notes section: the 48 stands, with the encrypted area still at 2/13 and the .rdm testing gate still closed because it has not started."
+    },
+    {
+      "increment": "14",
+      "estimate": 49,
+      "basis": "Encrypted .rdm and key recovery credited one further point (3/13). The dead end was in the interface, but what it blocked was a capability the contract already lists as outstanding - multi-draft review - and it is now reachable by design rather than only in the storage layer. Credit stops well short of the weight because the change is unverified source, no encrypted project has ever been opened on real hardware, the nine earlier polish fixes remain unexercised, and none of the contract's remaining gates (Mac CryptoKit parity, power-loss matrices, fuzzing, independent review, Keychain slots) has moved."
     }
   ]
 }
