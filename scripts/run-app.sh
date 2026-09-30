@@ -35,13 +35,54 @@ NATIVE_DERIVED="$BUILD_ROOT/native"
 APP="$NATIVE_DERIVED/Build/Products/Debug/Folio.app"
 mkdir -p "$BUILD_ROOT"
 
-if [[ ! -d Folio.xcodeproj || project.yml -nt Folio.xcodeproj || App -nt Folio.xcodeproj || Sources -nt Folio.xcodeproj ]]; then
-  if ! command -v xcodegen >/dev/null; then
-    echo 'Missing xcodegen. Install it with: brew install xcodegen' >&2
-    echo 'Then re-run this script so Folio.xcodeproj exists.' >&2
-    exit 1
-  fi
+# Always regenerate the Xcode project from project.yml.
+#
+# This used to be conditional, which is how a source file went missing from the
+# build. The condition was a timestamp comparison:
+#
+#     [[ App -nt Folio.xcodeproj ]]
+#
+# `App -nt Folio.xcodeproj` compares the modification time of the App directory
+# itself. Adding a new file inside App/Views touches App/Views, not App — so
+# after a `git pull` that introduced a new file, App/ was not newer than the
+# generated project, xcodegen was skipped, the new file was never added to the
+# project and never compiled, and the link failed with "cannot find X in scope"
+# for a type sitting right there on disk. Any check of this shape has the same
+# hole: a file can appear anywhere under a source directory without the
+# directory's own mtime moving.
+#
+# Generating unconditionally costs a fraction of a second. Getting it wrong
+# costs a confusing compiler error about code that plainly exists, so the
+# guaranteed-correct option is the one to take.
+if command -v xcodegen >/dev/null; then
   xcodegen generate --spec project.yml
+elif [[ ! -d Folio.xcodeproj ]]; then
+  echo 'Missing xcodegen. Install it with: brew install xcodegen' >&2
+  echo 'Then re-run this script so Folio.xcodeproj exists.' >&2
+  exit 1
+else
+  echo 'xcodegen not found; building the existing Folio.xcodeproj as-is.' >&2
+fi
+
+# The project just generated from the current tree must reference every source
+# file, so anything missing here is a fault in project.yml (a path left out, a
+# subtree excluded) rather than a stale timestamp. That failure is otherwise
+# invisible until the compiler reports the file's contents as missing, so it is
+# worth catching by name.
+missing=0
+while IFS= read -r source; do
+  case "$source" in
+    App/Info.plist|App/Folio.entitlements) continue ;;
+  esac
+  if ! grep -q -- "$(basename "$source")" Folio.xcodeproj/project.pbxproj; then
+    echo "Folio.xcodeproj does not reference $source." >&2
+    missing=1
+  fi
+done < <(find App \( -name '*.swift' -o -name '*.xcassets' \) 2>/dev/null)
+if (( missing )); then
+  echo 'project.yml does not include the files listed above. Fix its sources: entry' >&2
+  echo 'so that directory is picked up, then re-run this script.' >&2
+  exit 1
 fi
 
 xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug \

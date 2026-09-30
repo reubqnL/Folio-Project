@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Third report of the toolbar Notes/Roadmap/Connections control clicking without effect. A redesign was attempted in 95b8294 (three plain buttons) and rejected by the owner, then reverted in full. The appearance is unchanged: the same segmented control in the same place. The cause is now pinned to the toolbar host rather than the state: a segmented Picker is drawn by SwiftUI but sized by AppKit, so when the toolbar item is narrower than the control every segment stays visible while only the part inside the item's bounds receives clicks -- and Notes, leftmost and usually already selected, appears to work while Roadmap and Connections do not. The control is now a real NSSegmentedControl hosted via NSViewRepresentable, which reports its true intrinsic width and does its own hit testing; content hugging and compression resistance are both required so it cannot be squeezed. The 9f5096f regression (fixedSize after an explicit frame width) is gone. Unverified source.",
-  "current_work": "Owner rebuilds and reports whether the toolbar control now switches sections, plus the separating diagnostic: if Navigate > Open Roadmap (Option-Command-R) switches the section while the control does not, the fault is click delivery; if neither works, it is the section state. After that the owner's stated priority is the encrypted .rdm area, and the original report's remaining checklist items are still unwalked.",
+  "last_completed": "The delivered commit 26e628b did not compile, and the reason was not the Swift code. The owner's build failed with \"cannot find 'SectionSegmentedControl' in scope\" while the file was present in the repository: the generated Xcode project never referenced it, so it was never compiled. scripts/run-app.sh guarded xcodegen regeneration with `App -nt Folio.xcodeproj`, a comparison of the App directory's own mtime, which does not move when a file is added inside App/Views -- so regeneration was skipped and the new file was silently omitted from the build. The script now regenerates the project unconditionally, and additionally checks that the freshly generated project references every Swift and asset file under App/, naming any that are missing. Both branches of that check were exercised here against a fabricated project file. The toolbar switcher fix and the two earlier polish passes remain unverified source; the separating diagnostic has still never run.",
+  "current_work": "Owner rebuilds with `git pull && bash scripts/run-app.sh`, which now regenerates the project, and reports the separating diagnostic: with a project open, does Navigate > Open Roadmap (Option-Command-R) switch the section, and does the toolbar control switch it? If the menu works and the control does not, the fault is click delivery; if neither works, it is the section state. After that the owner's stated priority is the encrypted .rdm area, and the original report's remaining checklist items (Split in a normal window, clicking controls after resizing to the floor, the create/edit/save/reopen/search regression set) are still unwalked.",
   "history": [
     {
       "increment": "04",
@@ -143,6 +143,11 @@
       "increment": "13i",
       "estimate": 47,
       "basis": "No score change. A defect in an already-credited area was diagnosed and changed, the owner's design decision was respected by reverting the rejected redesign, but the fix is unverified source and the defect is intermittent, so only the next report can confirm it."
+    },
+    {
+      "increment": "13j",
+      "estimate": 47,
+      "basis": "No score change. This round fixed build tooling, not product capability: the app target now receives every source file, which removes a failure mode that had been silently discarding new files from the build entirely. Nothing about the reported UI defects is confirmed, the toolbar fix is still unverified source, and no test or compile ran here."
     }
   ]
 }

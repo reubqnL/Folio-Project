@@ -141,6 +141,26 @@ The coordinator writes the selection only when it differs from the current secti
 
 **Not verified:** unverified source. The diagnostic that will settle it either way: if **Navigate → Open Roadmap (⌥⌘R)** switches the section but the toolbar control still does not, the fault is in click delivery; if neither works, it is in the section state, which would contradict everything above.
 
+## Increment 13j — why the build failed, and the check that let it happen
+
+**The delivered commit did not compile, and the compiler error was misleading.** `26e628b` added `App/Views/SectionSegmentedControl.swift` and the owner's build failed with `cannot find 'SectionSegmentedControl' in scope` at `NotesWorkspaceView.swift:63` — a complaint about a type defined in a file that is plainly present in the repository.
+
+**The file was never in the build.** The `swift-frontend -c …` command line in the owner's transcript lists every other file under `App/` and does not list `SectionSegmentedControl.swift`, which means the generated Xcode project did not reference it, which means it was never compiled. The source was correct; the build never saw it.
+
+**The cause is `scripts/run-app.sh`.** Regeneration of `Folio.xcodeproj` from `project.yml` was guarded by a timestamp comparison:
+
+    [[ ! -d Folio.xcodeproj || project.yml -nt Folio.xcodeproj || App -nt Folio.xcodeproj || Sources -nt Folio.xcodeproj ]]
+
+`App -nt Folio.xcodeproj` compares the modification time of the `App` directory *itself*. Creating `App/Views/SectionSegmentedControl.swift` updates the mtime of `App/Views`, not of `App`. On the owner's machine the generated project was already newer than `App`, so xcodegen was skipped, the new file was never added to the project, and the build failed on a file that existed. The hole is general: **a file can appear anywhere under a source directory without that directory's own mtime moving**, so any check of this shape misses it — adding a file two levels deep, deleting one, or renaming one all pass the test that was meant to catch them. `scripts/verify-on-mac.sh` was never affected because it regenerates unconditionally.
+
+**The fix:** `run-app.sh` now regenerates `Folio.xcodeproj` from `project.yml` on every run whenever xcodegen is available. Generating unconditionally costs a fraction of a second; getting it wrong costs a confusing compiler error about code that visibly exists, so the guaranteed-correct option is the one taken. If xcodegen is absent the script still builds an existing project and says so.
+
+A second guard was added for the other way a file can be silently dropped: after generation, the script confirms the project references every `.swift` and `.xcassets` file under `App/`, and fails with the file's name if it does not. Since regeneration has just run against the current tree, a miss there is a fault in `project.yml`'s `sources:` entry rather than a stale timestamp, and it is reported as such. Both branches of that check were exercised here against a fabricated project file: with one file omitted it names that file and fails; with everything referenced it passes quietly.
+
+**What this does and does not explain.** It explains the build failure completely and it explains why the failure appeared only for the newest commit — an older commit's files were all present when the project was last generated. It does not confirm anything about the toolbar switcher: the fix in `26e628b` is still unverified source, and the diagnostic below has still never run.
+
+**Not verified:** neither the app target nor the toolbar fix has been compiled here. There is no Swift toolchain in this environment, so the claim that this compiles is the owner's next `bash scripts/run-app.sh` and nothing else.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.
