@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "The toolbar Notes/Roadmap/Connections switcher is confirmed fixed on the owner's Mac: after the regeneration fix, the app built, all three segments switch the section, the Navigate > Open Roadmap menu path works, and the bar looks as it did before. That closes a defect reported three times and settles the diagnostic in favour of the toolbar host's click delivery rather than the section state. Two adjustments were then requested and made, both confined to the control's own host: segments are now equal width (segmentDistribution .fillEqually, so the bar is sized to three times its widest label instead of the sum of the three), and the control shows the operation-not-allowed cursor while it is disabled, since a disabled NSSegmentedControl otherwise leaves the arrow cursor and looks clickable. Its tooltip now says why it is unavailable. Both adjustments are unverified source.",
-  "current_work": "Owner rebuilds to check the two switcher adjustments: that equal-width segments still read as slick rather than chunky (the bar is wider than before by roughly the difference between one Connections label and the Notes/Roadmap pair), and that hovering the bar with no project open shows the not-allowed cursor. The nine polish fixes from the two earlier passes and both of this round's adjustments remain uncompiled-and-untested until that build. Then the original report's unwalked checklist items (Split in a normal window, clicking controls after resizing to the floor, the create/edit/save/reopen/search regression set), and the owner's stated next priority is the encrypted .rdm area.",
+  "last_completed": "The equal-width segments from 13k were reported still wrong: the owner sees 'Connections' too close to its edge rather than three segments that match. segmentDistribution = .fillEqually equalises segments to the widest segment's total width, which already includes the stock control's padding, so all three measured the same while only Connections sat tight against its own edges -- equal widths, unequal-looking padding. The widths are now set outright: equalizeSegmentWidths measures every label with the control's font, takes the widest, and sets each segment to widest + labelPadding x 2 from a single constant at the top of the file. The cursor and tooltip changes from 13k were confirmed working by the owner. Unverified source.",
+  "current_work": "Owner rebuilds to check the segment spacing: whether the three segments now read as the same size with even padding. The bar is wider than the per-label original because it is equalised to the longest word, and the labelPadding constant at the top of App/Views/SectionSegmentedControl.swift is the one number that changes it if it reads as too wide. After that the original report's unwalked checklist items (Split in a normal window, clicking controls after resizing to the floor, the create/edit/save/reopen/search regression set), and the owner's stated next priority is the encrypted .rdm area.",
   "history": [
     {
       "increment": "04",
@@ -153,6 +153,11 @@
       "increment": "13k",
       "estimate": 48,
       "basis": "Native editing/reading credited one further point (12/15): the toolbar section switcher -- a defect reported three times -- is now compiled and confirmed working at runtime by the owner, which is the same class of runtime evidence this area was credited for in 13f, and it is a different fix rather than a re-count of that one. Credit stops short of the full weight because the two adjustments made this round are unverified, the nine earlier polish fixes are still unexercised, and no accessibility, IME or large-vault behaviour has been tested."
+    },
+    {
+      "increment": "13l",
+      "estimate": 48,
+      "basis": "No score change. This is a second correction to a control already credited in 13k, and it is unverified source; the credit for the switcher working stands on the owner's runtime confirmation recorded there, not on this. The nine polish fixes from the earlier passes remain unexercised."
     }
   ]
 }

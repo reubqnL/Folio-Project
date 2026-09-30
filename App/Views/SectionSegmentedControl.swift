@@ -1,14 +1,51 @@
 import SwiftUI
 import AppKit
 
-/// A segmented control that shows the slashed-circle cursor while it is
-/// disabled.
+/// Padding inside each segment, on each side of its label.
 ///
-/// A disabled `NSSegmentedControl` leaves the arrow cursor over itself, so it
-/// looks exactly like a control that would work, and the click that does
-/// nothing is the only way to find out otherwise. Showing the
-/// operation-not-allowed cursor says "not yet" before the click is spent.
+/// This is the one number that controls how wide the bar is. Equal segments
+/// are all sized to the widest label ("Connections"), so this padding is
+/// charged three times over.
+private let sectionSwitcherLabelPadding: CGFloat = 14
+
+/// The Notes / Roadmap / Connections switcher, as a real `NSSegmentedControl`,
+/// with two behaviours the stock control does not have.
 final class SectionSwitcherSegmentedControl: NSSegmentedControl {
+    /// Give every segment the same width: the widest label's, plus the same
+    /// padding either side.
+    ///
+    /// `segmentDistribution = .fillEqually` was tried first and is not enough.
+    /// It equalises the segments to the widest label *as that label is already
+    /// padded*, so "Connections" ends up sitting close to its own edges while
+    /// "Notes" floats in a pool of space — three segments of equal width that
+    /// still do not look like the same thing. Setting the widths outright makes
+    /// the three identical and puts equal padding around every label, which is
+    /// what "all the same size" has to mean to look deliberate.
+    ///
+    /// Called from `makeNSView` and `updateNSView`. It is not re-run if the
+    /// control's font changes on its own, because nothing in this app changes
+    /// it; if that ever becomes false this needs to be called from a `font`
+    /// observer as well.
+    func equalizeSegmentWidths(labelPadding: CGFloat) {
+        let font = self.font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        var widest: CGFloat = 0
+        for index in 0..<segmentCount {
+            let label = label(forSegment: index) ?? ""
+            let width = (label as NSString).size(withAttributes: [.font: font]).width
+            widest = max(widest, width)
+        }
+        guard widest > 0 else { return }
+        let segmentWidth = (widest + labelPadding * 2).rounded(.up)
+        for index in 0..<segmentCount where self.width(forSegment: index) != segmentWidth {
+            setWidth(segmentWidth, forSegment: index)
+        }
+    }
+
+    /// Show the slashed-circle cursor while disabled.
+    ///
+    /// A disabled `NSSegmentedControl` leaves the arrow cursor over itself, so
+    /// it looks exactly like a control that would work, and the click that does
+    /// nothing is the only way to find out otherwise.
     override var isEnabled: Bool {
         didSet {
             guard oldValue != isEnabled else { return }
@@ -59,14 +96,10 @@ struct SectionSegmentedControl: NSViewRepresentable {
             action: #selector(Coordinator.segmentChanged(_:))
         )
         control.segmentStyle = .rounded
-        // Equal-width segments. Sized to their own labels, "Notes" is about half
-        // the width of "Connections" and reads as a smaller thing than the
-        // sections beside it rather than as one of three equals. Equal widths
-        // cost a little padding and make the three read as a set.
-        control.segmentDistribution = .fillEqually
         control.selectedSegment = context.coordinator.index(of: selection)
         control.isEnabled = isEnabled
         control.controlSize = .regular
+        control.equalizeSegmentWidths(labelPadding: sectionSwitcherLabelPadding)
         // Refuse to be squeezed: a compressed control is a control whose
         // segments no longer sit under the pointer.
         control.setContentHuggingPriority(.required, for: .horizontal)
@@ -83,6 +116,8 @@ struct SectionSegmentedControl: NSViewRepresentable {
         if control.isEnabled != isEnabled { control.isEnabled = isEnabled }
         let toolTip = context.coordinator.toolTip(isEnabled: isEnabled)
         if control.toolTip != toolTip { control.toolTip = toolTip }
+        (control as? SectionSwitcherSegmentedControl)?
+            .equalizeSegmentWidths(labelPadding: sectionSwitcherLabelPadding)
     }
 
     @MainActor

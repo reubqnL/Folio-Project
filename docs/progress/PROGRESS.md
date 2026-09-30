@@ -174,6 +174,20 @@ Nothing else about the control changed, and the appearance the owner asked to pr
 
 **Not verified:** the two adjustments above are unverified source. Neither can be exercised here — the cursor behaviour in particular is a property of a running AppKit window — so both rest on the owner's next build.
 
+## Increment 13l — segment widths, set rather than distributed
+
+**The owner's report on 13k:** the cursor change works, all three segments still switch, and the spacing is still wrong — *"Connections is too close to the edge. there should all be the same size"*.
+
+**`segmentDistribution = .fillEqually` does not do what the phrase "equal width" suggests.** It equalises the segments to the widest segment's *total* width, and that total already includes the stock control's own padding around `Connections`. The result is three segments of identical width in which `Connections` sits close to its edges while `Notes` and `Roadmap` float in space. Every segment measures the same and none of them looks like the same thing. It was the wrong lever.
+
+**Now the widths are set outright.** `SectionSwitcherSegmentedControl.equalizeSegmentWidths(labelPadding:)` measures each label with the control's own font, takes the widest (`Connections`), and sets every segment to `widest + labelPadding × 2`, with `labelPadding` a single file-level constant at the top of the file. Three identical segments, the same padding either side of every label. It runs from `makeNSView` and again from `updateNSView`, and only writes widths that differ, so a steady state costs a comparison rather than a layout invalidation.
+
+The cost is real and worth stating: equalising to `Connections` makes the bar wider, because `Connections` is by some margin the longest of the three words. Roughly, the bar goes from about 210pt with per-label sizing to about 275pt under `.fillEqually` and about 300pt with this padding. The padding constant is the one number that moves it, and it is at the top of the file for exactly that reason.
+
+The toolbar has the room. At the 1040pt minimum window width the leading Launcher item and the three trailing actions leave well over 600pt for the principal region, so a 300pt control is not near the point where AppKit would start hiding items behind a chevron — which is the mechanism that caused the original click-delivery defect, so it is worth confirming rather than assuming.
+
+**Not verified:** unverified source. Neither the widths nor the cursor behaviour can be exercised here.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.
