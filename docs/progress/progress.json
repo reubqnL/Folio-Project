@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 47,
+  "estimated_percent": 48,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -18,7 +18,7 @@
     {
       "area": "Native editing, reading and accessibility",
       "weight": 15,
-      "credited_points": 11
+      "credited_points": 12
     },
     {
       "area": "Roadmap and connections",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "The delivered commit 26e628b did not compile, and the reason was not the Swift code. The owner's build failed with \"cannot find 'SectionSegmentedControl' in scope\" while the file was present in the repository: the generated Xcode project never referenced it, so it was never compiled. scripts/run-app.sh guarded xcodegen regeneration with `App -nt Folio.xcodeproj`, a comparison of the App directory's own mtime, which does not move when a file is added inside App/Views -- so regeneration was skipped and the new file was silently omitted from the build. The script now regenerates the project unconditionally, and additionally checks that the freshly generated project references every Swift and asset file under App/, naming any that are missing. Both branches of that check were exercised here against a fabricated project file. The toolbar switcher fix and the two earlier polish passes remain unverified source; the separating diagnostic has still never run.",
-  "current_work": "Owner rebuilds with `git pull && bash scripts/run-app.sh`, which now regenerates the project, and reports the separating diagnostic: with a project open, does Navigate > Open Roadmap (Option-Command-R) switch the section, and does the toolbar control switch it? If the menu works and the control does not, the fault is click delivery; if neither works, it is the section state. After that the owner's stated priority is the encrypted .rdm area, and the original report's remaining checklist items (Split in a normal window, clicking controls after resizing to the floor, the create/edit/save/reopen/search regression set) are still unwalked.",
+  "last_completed": "The toolbar Notes/Roadmap/Connections switcher is confirmed fixed on the owner's Mac: after the regeneration fix, the app built, all three segments switch the section, the Navigate > Open Roadmap menu path works, and the bar looks as it did before. That closes a defect reported three times and settles the diagnostic in favour of the toolbar host's click delivery rather than the section state. Two adjustments were then requested and made, both confined to the control's own host: segments are now equal width (segmentDistribution .fillEqually, so the bar is sized to three times its widest label instead of the sum of the three), and the control shows the operation-not-allowed cursor while it is disabled, since a disabled NSSegmentedControl otherwise leaves the arrow cursor and looks clickable. Its tooltip now says why it is unavailable. Both adjustments are unverified source.",
+  "current_work": "Owner rebuilds to check the two switcher adjustments: that equal-width segments still read as slick rather than chunky (the bar is wider than before by roughly the difference between one Connections label and the Notes/Roadmap pair), and that hovering the bar with no project open shows the not-allowed cursor. The nine polish fixes from the two earlier passes and both of this round's adjustments remain uncompiled-and-untested until that build. Then the original report's unwalked checklist items (Split in a normal window, clicking controls after resizing to the floor, the create/edit/save/reopen/search regression set), and the owner's stated next priority is the encrypted .rdm area.",
   "history": [
     {
       "increment": "04",
@@ -148,6 +148,11 @@
       "increment": "13j",
       "estimate": 47,
       "basis": "No score change. This round fixed build tooling, not product capability: the app target now receives every source file, which removes a failure mode that had been silently discarding new files from the build entirely. Nothing about the reported UI defects is confirmed, the toolbar fix is still unverified source, and no test or compile ran here."
+    },
+    {
+      "increment": "13k",
+      "estimate": 48,
+      "basis": "Native editing/reading credited one further point (12/15): the toolbar section switcher -- a defect reported three times -- is now compiled and confirmed working at runtime by the owner, which is the same class of runtime evidence this area was credited for in 13f, and it is a different fix rather than a re-count of that one. Credit stops short of the full weight because the two adjustments made this round are unverified, the nine earlier polish fixes are still unexercised, and no accessibility, IME or large-vault behaviour has been tested."
     }
   ]
 }

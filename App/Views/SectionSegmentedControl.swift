@@ -1,6 +1,30 @@
 import SwiftUI
 import AppKit
 
+/// A segmented control that shows the slashed-circle cursor while it is
+/// disabled.
+///
+/// A disabled `NSSegmentedControl` leaves the arrow cursor over itself, so it
+/// looks exactly like a control that would work, and the click that does
+/// nothing is the only way to find out otherwise. Showing the
+/// operation-not-allowed cursor says "not yet" before the click is spent.
+final class SectionSwitcherSegmentedControl: NSSegmentedControl {
+    override var isEnabled: Bool {
+        didSet {
+            guard oldValue != isEnabled else { return }
+            // Cursor rectangles are cached per window; without this the old
+            // cursor stays in force until the pointer leaves and returns.
+            window?.invalidateCursorRects(for: self)
+        }
+    }
+
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        guard !isEnabled else { return }
+        addCursorRect(bounds, cursor: .operationNotAllowed)
+    }
+}
+
 /// The Notes / Roadmap / Connections switcher, as a real `NSSegmentedControl`.
 ///
 /// This looks identical to the segmented `Picker` it replaces — on macOS,
@@ -28,13 +52,18 @@ struct SectionSegmentedControl: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSSegmentedControl {
-        let control = NSSegmentedControl(
+        let control = SectionSwitcherSegmentedControl(
             labels: context.coordinator.labels,
             trackingMode: .selectOne,
             target: context.coordinator,
             action: #selector(Coordinator.segmentChanged(_:))
         )
         control.segmentStyle = .rounded
+        // Equal-width segments. Sized to their own labels, "Notes" is about half
+        // the width of "Connections" and reads as a smaller thing than the
+        // sections beside it rather than as one of three equals. Equal widths
+        // cost a little padding and make the three read as a set.
+        control.segmentDistribution = .fillEqually
         control.selectedSegment = context.coordinator.index(of: selection)
         control.isEnabled = isEnabled
         control.controlSize = .regular
@@ -43,7 +72,7 @@ struct SectionSegmentedControl: NSViewRepresentable {
         control.setContentHuggingPriority(.required, for: .horizontal)
         control.setContentCompressionResistancePriority(.required, for: .horizontal)
         control.setAccessibilityLabel("Workspace section")
-        control.toolTip = "Switch between Notes, Roadmap and Connections"
+        control.toolTip = context.coordinator.toolTip(isEnabled: isEnabled)
         return control
     }
 
@@ -52,6 +81,8 @@ struct SectionSegmentedControl: NSViewRepresentable {
         let index = context.coordinator.index(of: selection)
         if control.selectedSegment != index { control.selectedSegment = index }
         if control.isEnabled != isEnabled { control.isEnabled = isEnabled }
+        let toolTip = context.coordinator.toolTip(isEnabled: isEnabled)
+        if control.toolTip != toolTip { control.toolTip = toolTip }
     }
 
     @MainActor
@@ -79,6 +110,14 @@ struct SectionSegmentedControl: NSViewRepresentable {
 
         func index(of section: WorkspaceSession.WorkspaceSection) -> Int {
             sections.firstIndex(of: section) ?? 0
+        }
+
+        /// The control is disabled until a project is open. Saying why is the
+        /// difference between a control that is broken and one that is waiting.
+        func toolTip(isEnabled: Bool) -> String {
+            isEnabled
+                ? "Switch between Notes, Roadmap and Connections"
+                : "Open a project to switch sections"
         }
 
         @objc func segmentChanged(_ sender: NSSegmentedControl) {

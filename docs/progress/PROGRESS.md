@@ -161,6 +161,19 @@ A second guard was added for the other way a file can be silently dropped: after
 
 **Not verified:** neither the app target nor the toolbar fix has been compiled here. There is no Swift toolchain in this environment, so the claim that this compiles is the owner's next `bash scripts/run-app.sh` and nothing else.
 
+## Increment 13k — the switcher works, and two adjustments to it
+
+**The reported defect is confirmed fixed on the owner's machine.** After `de93042`/`a5bfdb8`, `bash scripts/run-app.sh` built and launched, and the owner reports: all three segments switch the section, the `Navigate → Open Roadmap` menu path works, and the bar looks as it did before. That closes the item reported three times across this branch. It also settles the standing diagnostic in favour of the earlier reading — a fault in the toolbar host's click delivery, not in the section state — and the fix in `26e628b` is no longer unverified source now that the file actually reaches the compiler.
+
+**Two adjustments were requested, both confined to the control's own host.** The owner asked that the three segments be equally spaced, and that hovering the bar with no project open show a cursor indicating it cannot be clicked.
+
+- **Equal segments.** `segmentDistribution` is now `.fillEqually`. The control sizes itself to three times its widest label instead of to the sum of the three labels, so `Notes` is the same width as `Connections` rather than roughly half of it. This makes the bar wider than it was, by about the difference between one `Connections` label and the `Notes`/`Roadmap` pair. The owner's instruction was explicitly "not too much so its still slick", so the amount is worth watching on the next build: `.fillEqually` is the narrowest setting that makes the three equal, and there is no narrower one, but the whole control can be brought back down by shortening a label if it reads as chunky.
+- **The disabled cursor.** `NSSegmentedControl` leaves the arrow cursor over itself when disabled, so an inert control is indistinguishable from a working one until you click it and nothing happens. `SectionSwitcherSegmentedControl` overrides `resetCursorRects()` to add `.operationNotAllowed` over its bounds while disabled, and invalidates the cursor rects when `isEnabled` changes so the change takes effect without the pointer having to leave and re-enter. The tooltip also now says "Open a project to switch sections" instead of naming the three sections, since while disabled the useful information is why.
+
+Nothing else about the control changed, and the appearance the owner asked to preserve is untouched apart from the segment widths they asked to change.
+
+**Not verified:** the two adjustments above are unverified source. Neither can be exercised here — the cursor behaviour in particular is a property of a running AppKit window — so both rest on the owner's next build.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.
