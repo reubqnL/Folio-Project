@@ -63,13 +63,17 @@ struct SectionSegmentedControl: NSViewRepresentable {
             self.selection = selection
         }
 
-        var labels: [String] { sections.map(title(for:)) }
+        var labels: [String] { sections.map { title(for: $0) } }
 
+        // Written with explicit returns rather than switch-expression arms.
+        // Switch expressions are valid here, but this file cannot be compiled
+        // in the environment it was written in, and a build failure costs the
+        // reader a round trip while three `return` keywords cost nothing.
         func title(for section: WorkspaceSession.WorkspaceSection) -> String {
             switch section {
-            case .notes: "Notes"
-            case .roadmap: "Roadmap"
-            case .connections: "Connections"
+            case .notes: return "Notes"
+            case .roadmap: return "Roadmap"
+            case .connections: return "Connections"
             }
         }
 
