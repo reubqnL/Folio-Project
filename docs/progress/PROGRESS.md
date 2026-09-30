@@ -123,18 +123,23 @@ The first pass fixed one shared-state bug and some missing labels. Reading the r
 
 **Not verified:** unverified source, like the pass above.
 
-### The section switcher that "clicks but does nothing" — second report (2026-09-29)
+## The section switcher: third report, and the owner's design decision (2026-09-29)
 
-The owner reported the toolbar's Notes/Roadmap/Connections control accepting a click and changing nothing, adding *"does it randomly choose when to work?"* after having previously reported it working. Two facts point at the control rather than at the section state:
+The toolbar's Notes/Roadmap/Connections control was reported for the third time as *"clicking but not doing anything"*, with the owner asking whether it *"randomly chooses when to work"*.
 
-1. **The sidebar performs the identical switch with plain `Button`s and has never been reported broken.** The toolbar used a segmented `Picker`.
-2. **A regression was introduced in `9f5096f`.** The base commit gave the Picker a stiff `.frame(width: 275)`. The rewrite added `.fixedSize()` *after* `.frame(width: 300)`, and `.fixedSize()` discards that width in favour of the control's ideal size. Inside an AppKit toolbar that is precisely the situation where the drawn control and its hit region stop agreeing — a click animates but lands nowhere useful.
+**A redesign was attempted and rejected.** `95b8294` replaced the segmented Picker with three plain `Button`s, mirroring the sidebar. The owner's response was to keep the existing look: *"Do NOT redesign it, keep it the same as previous iterations."* That commit was reverted in full, including its progress notes, and the control's appearance is unchanged from `9f5096f`.
 
-The state model is not implicated: `workspaceSection` is a plain stored property, `setWorkspaceSection` is unconditional, the Picker's only disablement is `project == nil`, and every other write to the property happens on deliberate navigation. In particular `refreshProject` — the one background path that runs while the user is reading — never touches the section, and `selectNote` is called only from deliberate navigation, not from the file-observation refresh.
+**What the evidence actually says.** The fault is intermittent and window-width dependent, and it is a property of the picker's toolbar host rather than of the section state:
 
-**Change:** the toolbar now uses the pattern already proven in the sidebar — three plain `Button`s in an `HStack`, with a filled background and the `.isSelected` accessibility trait marking the current section. There is no selection binding to fall out of step, the click target is the label itself, and the group carries an explicit width rather than `fixedSize()`.
+- A segmented `Picker` inside `ToolbarItem(placement: .principal)` is drawn by SwiftUI but sized by AppKit. When the item's bounds end up narrower than the control, every segment stays visible while only the part inside those bounds receives clicks. **Notes is leftmost and is usually the section already showing, so it appears to work while Roadmap and Connections do nothing** — which is exactly the reported asymmetry, and why it looks arbitrary.
+- The state model is not implicated. `workspaceSection` is a plain stored property, `setWorkspaceSection` is unconditional, and the only disablement is `project == nil`. `refreshProject` — the one background path that runs while the owner is reading — never writes to it.
+- A regression was introduced in `9f5096f` and removed here: `.fixedSize()` was added after `.frame(width: 300)`, and `.fixedSize()` discards that width in favour of the control's ideal size. That made the item-versus-control mismatch worse, though it was not the original cause — the base commit, which had a stiff `.frame(width: 275)` and no `fixedSize()`, failed the same way.
 
-**Not verified:** unverified source. This is a hypothesis-driven change and the owner's next report decides it: if the buttons still fail, the fault is outside the control and the diagnostic questions in the handover distinguish a swallowed click from a disabled control from a section that changes and reverts.
+**The fix, with the appearance preserved:** `App/Views/SectionSegmentedControl.swift` hosts an actual `NSSegmentedControl` through `NSViewRepresentable`. On macOS this is the same control SwiftUI's segmented picker draws — same labels, same rounded style, same position in the toolbar — but as an `NSView` it reports a real intrinsic content size to AppKit and performs its own hit testing, so the item is sized to what is drawn. Its content-hugging and compression-resistance priorities are both `.required`, so it cannot be squeezed into a state where a segment is visible but unclickable.
+
+The coordinator writes the selection only when it differs from the current section, so the binding's side effects (building the graph, loading the roadmap) run on real changes rather than on every click.
+
+**Not verified:** unverified source. The diagnostic that will settle it either way: if **Navigate → Open Roadmap (⌥⌘R)** switches the section but the toolbar control still does not, the fault is in click delivery; if neither works, it is in the section state, which would contradict everything above.
 
 ## Evidence status
 

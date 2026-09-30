@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "Fixed the toolbar's Notes/Roadmap/Connections switch, reported for the second time as accepting a click and changing nothing. Two findings: the sidebar performs the same switch with plain Buttons and has never been reported broken, and 9f5096f had added .fixedSize() after .frame(width: 300), which discards the explicit width and hands the control its ideal size inside an AppKit toolbar -- exactly where a drawn control and its hit region stop agreeing. The state model is not implicated: workspaceSection is a plain stored property, setWorkspaceSection is unconditional, and no background path (including the file-observation refresh) writes to it. The toolbar now uses three plain Buttons with a selected background and the isSelected trait, mirroring the sidebar pattern.",
-  "current_work": "Awaiting the owner's rebuild and report on the toolbar section buttons, with diagnostic questions to distinguish a swallowed click from a disabled control from a section that changes and reverts. After that, the owner's stated priority is the encrypted .rdm area, and the original report's remaining checklist items (Split in a normal window, clicking controls after resizing to the floor, and create/edit/save/reopen/search) are still unwalked.",
+  "last_completed": "Third report of the toolbar Notes/Roadmap/Connections control clicking without effect. A redesign was attempted in 95b8294 (three plain buttons) and rejected by the owner, then reverted in full. The appearance is unchanged: the same segmented control in the same place. The cause is now pinned to the toolbar host rather than the state: a segmented Picker is drawn by SwiftUI but sized by AppKit, so when the toolbar item is narrower than the control every segment stays visible while only the part inside the item's bounds receives clicks -- and Notes, leftmost and usually already selected, appears to work while Roadmap and Connections do not. The control is now a real NSSegmentedControl hosted via NSViewRepresentable, which reports its true intrinsic width and does its own hit testing; content hugging and compression resistance are both required so it cannot be squeezed. The 9f5096f regression (fixedSize after an explicit frame width) is gone. Unverified source.",
+  "current_work": "Owner rebuilds and reports whether the toolbar control now switches sections, plus the separating diagnostic: if Navigate > Open Roadmap (Option-Command-R) switches the section while the control does not, the fault is click delivery; if neither works, it is the section state. After that the owner's stated priority is the encrypted .rdm area, and the original report's remaining checklist items are still unwalked.",
   "history": [
     {
       "increment": "04",
@@ -142,7 +142,7 @@
     {
       "increment": "13i",
       "estimate": 47,
-      "basis": "No score change. A defect in an already-credited area was diagnosed and changed, but the change is unverified source and the defect was reported as intermittent, so only the owner's next report can confirm it."
+      "basis": "No score change. A defect in an already-credited area was diagnosed and changed, the owner's design decision was respected by reverting the rejected redesign, but the fix is unverified source and the defect is intermittent, so only the next report can confirm it."
     }
   ]
 }
