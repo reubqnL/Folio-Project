@@ -134,7 +134,16 @@ final class WorkspaceSession {
                                                 notes: encryptedNotes, roadmap: roadmapSnapshot.document)
                 encryptedCopyMessage = "Copy prepared. Choose a folder and passphrase."
                 encrypted.chooseToCreate(from: payload)
-                if encrypted.phase == .creating { destination = .encrypted }
+                if encrypted.phase == .creating {
+                    destination = .encrypted
+                } else {
+                    // The picker did not open, so say why rather than leaving
+                    // the message claiming a copy is waiting to be placed. The
+                    // controller's own message is cleared by the next encrypt
+                    // attempt, so this is a status update, not a trap.
+                    encryptedCopyMessage = "Copy prepared, but no encrypted project was created."
+                    errorMessage = encrypted.errorMessage
+                }
             } catch is CancellationError {
                 encryptedCopyMessage = "Copy cancelled; the plain project was not changed."
             } catch {

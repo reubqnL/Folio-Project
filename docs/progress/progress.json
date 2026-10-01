@@ -1,7 +1,7 @@
 {
   "scope": "Approved native macOS FolioNotes scope; deferred modules/platforms remain gated",
   "method": "Subjective weighted planning estimate; not verified security/correctness, percentage of code, or a release certificate.",
-  "estimated_percent": 49,
+  "estimated_percent": 50,
   "release_ready": false,
   "owner_testing": "HOLD",
   "areas": [
@@ -33,7 +33,7 @@
     {
       "area": "Encrypted .rdm and key recovery",
       "weight": 13,
-      "credited_points": 3
+      "credited_points": 4
     },
     {
       "area": "E2EE collaboration",
@@ -51,8 +51,8 @@
       "credited_points": 1
     }
   ],
-  "last_completed": "The owner reported that the .rdm area does not let them create an encrypted project. The cause is the App Sandbox, at the first write: Folio asked for a file (NSSavePanel to create, NSOpenPanel with a .rdm filter to open) and then used the folder around it, because an encrypted project also creates a .folio folder beside the archive for its lock, staging area and encrypted working drafts. A panel-selected file grant covers that file alone and does not extend to its directory -- Apple DTS states this directly -- so RDMFileStore failed at the .folio or lock step before any cryptography ran. Creation could never have worked in a sandboxed build, and opening was broken the same way. Fixed by asking for the folder: both flows now choose a directory, creation writes <folder>/<project name>.rdm with the name sanitised into one path component and previewed in the card by the same function, opening finds the .rdm inside the folder and offers a list when there are several, and the folder grant is held as a security-scoped resource for the session and released on lock. Unverified source.",
-  "current_work": "Owner rebuilds and, when willing, tries creating a throwaway encrypted project in a scratch folder - explicitly not real data. That is the only way to find out whether the storage layer itself works, since no encrypted project has ever been created or opened on real hardware and the Swift tests cover the container but not the app target. Still open in the encrypted area: the plain-to-encrypted copy path, checkpoint failure paths, and the contract's remaining gates (Mac CryptoKit parity, power-loss matrices, fuzzing, independent review, Keychain device slots). Also still unwalked: the original report's checklist items and the nine polish fixes from the two earlier passes.",
+  "last_completed": "The encrypted container works on real hardware. The owner created an encrypted project in a scratch folder on their Mac, got the one-time recovery code screen, stored it, locked the project and reopened it with the passphrase. That is the first time any of this area has run outside the test suite, it confirms the sandbox diagnosis in 14c, and it exercises create, the recovery-code handoff, lock and reopen through the app. Four silent dead ends in the encrypted workspace were then removed, all of the same shape the owner has complained about repeatedly: a control that does nothing and says nothing. The plain-to-encrypted copy could announce 'Copy prepared' and then show nothing when an encrypted project was already open; Write encrypted checkpoint did nothing with an empty note path, and nothing again when the note had left the project; and the two saved-passphrase buttons did nothing with no project chosen. All four now say why. The remaining guards in that controller were audited and left alone: they sit behind buttons that are already disabled in the matching state. Unverified source.",
+  "current_work": "Continuing on the encrypted .rdm area. Now that creation and reopen are confirmed working, the next things worth exercising are the ones that were never reachable before: writing a checkpoint, the encrypted working drafts surviving a quit and reopen, and the plain-to-encrypted copy of FOLIO TEST. The owner should keep using throwaway .rdm files, not real data, since the container's own contract still says no sensitive project belongs in it. Still open in the area: checkpoint failure paths, Mac CryptoKit parity, power-loss matrices, fuzzing, independent review and Keychain device slots. Also still unwalked: the original report's checklist items and the nine polish fixes from the earlier passes.",
   "history": [
     {
       "increment": "04",
@@ -178,6 +178,11 @@
       "increment": "14c",
       "estimate": 49,
       "basis": "No score change. This removes a defect that made the encrypted area entirely unreachable in a sandboxed build, which is a precondition for its credit rather than credit itself: nothing has been created, opened or tested, so the area stays at 3/13. The fix is unverified source and rests on documented sandbox behaviour rather than on this project's own run."
+    },
+    {
+      "increment": "14d",
+      "estimate": 50,
+      "basis": "Encrypted .rdm and key recovery credited one further point (4/13). The area now has its first runtime evidence, and it is the kind that matters most for it: the container being created, locked and reopened through the real app on the target platform, not through a test fixture. Credit stops well short of the weight because this is a smoke test on one machine, the four dead-end fixes are unverified source, no checkpoint or working-draft recovery has been exercised, which keychain implementation the convenience store reaches is still unknown, and every gate the contract lists for feature-complete handoff remains open."
     }
   ]
 }

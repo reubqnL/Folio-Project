@@ -246,6 +246,23 @@ The create card's subtitle, the idle explanation and the copy-flow message were 
 
 **Not verified:** unverified source, and this one is structural rather than cosmetic. It cannot be compiled or exercised here, no encrypted project has been created or opened on real hardware, and the sandbox behaviour it depends on is documented by Apple but not observed on this project's own build. The next build is the first time any of it runs.
 
+## Increment 14d — the encrypted container works on real hardware, and four silent dead ends
+
+**First runtime evidence the encrypted area has ever had.** The owner created an encrypted project in a throwaway folder on their Mac, got the one-time recovery code screen, stored it, and then locked the project and reopened it with the passphrase. Creation, the recovery-code path, locking and unlocking all work on macOS. This is the first time any of it has run on real hardware; until now the evidence was the SwiftPM suite plus unverified SwiftUI source, and no `.rdm` file had ever existed outside a test fixture.
+
+It also confirms the sandbox diagnosis in 14c. Asking for the folder instead of the file is what made the first write succeed, which is only consistent with the panel having granted access to the file alone.
+
+**Four dead ends in the encrypted workspace, all of the same shape: a control that does nothing and says nothing.** The owner's most persistent complaint across this branch has been exactly this — a control that looks live and produces no result — so the pattern is worth eliminating wherever it appears, not only where it was reported.
+
+1. **The plain-to-encrypted copy could report success while doing nothing.** `chooseToCreate` returned silently when the controller was not idle, so with an encrypted project already open the copy prepared its payload, announced "Copy prepared", and then no picker appeared and no reason was given. It now reports why it cannot proceed, and the copy path in `WorkspaceSession` checks whether the picker actually opened and says so if it did not.
+2. **Write encrypted checkpoint did nothing with an empty note path.** Clearing the path field and pressing the button returned at the guard. It now asks for a path.
+3. **The same button did nothing when the note had left the project.** The guard against a missing note identity returned silently; it now says the note is no longer part of the project and what to do instead.
+4. **The two saved-passphrase buttons** returned silently with no file selected. Both now say to choose a project first.
+
+The remaining `guard … else { return }` statements in the controller were audited rather than changed. They are phase guards behind buttons that only render in the matching phase, buttons already disabled in the corresponding state, or edges inside a task. A guard behind a disabled control is defence in depth, not a dead end, and the distinction is what decided which ones were changed.
+
+**Not verified:** the four changes above are unverified source. The creation and reopen result is the owner's runtime report and stands on its own.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.

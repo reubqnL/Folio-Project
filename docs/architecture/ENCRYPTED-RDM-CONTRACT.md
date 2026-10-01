@@ -67,6 +67,10 @@ The derived search index cache is a single sealed `FRX1` record, `.folio/<archiv
 
 The current checkpoint test suite covers wrong credentials, tampering, truncation, metadata/object transplant, stale external replacement, lock ownership and reopen. It does not simulate power loss or APFS `F_FULLFSYNC` in this Linux workspace.
 
+## Runtime evidence
+
+The native workspace has now been exercised on the owner's Mac: an encrypted project was created in a scratch folder, the one-time recovery code was shown and acknowledged, the project was locked, and it was reopened with its passphrase. That is the first time any part of this area has run on real hardware, and it exercises create, the recovery-code handoff, lock and reopen through the app rather than through the test suite. It is a smoke test, not a verification: nothing was tampered with, no checkpoint was written with a hostile filesystem, no power loss was simulated, and which keychain implementation the convenience store reached was not observed.
+
 ## Evidence
 
 - 10 primitive tests: AES-GCM known answers, HKDF RFC vector, Argon2id vector/profile, authentication failures, erasure, domain separation and bounds.

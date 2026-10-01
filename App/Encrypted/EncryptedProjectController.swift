@@ -280,15 +280,29 @@ final class EncryptedProjectController {
     }
 
     func checkpointDraft() async {
-        guard !isCheckpointing, let session, let project, hasDraft,
-              !draftPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // Each of these used to return silently, so the Write encrypted
+        // checkpoint button could be pressed and produce nothing at all — most
+        // easily by clearing the note path first. A button that does nothing
+        // and says nothing is indistinguishable from a broken one.
+        guard !isCheckpointing else { return }
+        guard let session, let project, hasDraft else {
+            errorMessage = "There is no open draft to write."
+            return
+        }
+        guard !draftPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "Give the note a path before writing it into the encrypted project."
+            return
+        }
         let draftID = editingNoteID ?? draftNoteID ?? UUID()
         let replacement = RDMNote(id: draftID, path: draftPath, markdown: draftMarkdown)
         let nextNotes: [RDMNote]
         if isNewDraft {
             nextNotes = project.notes + [replacement]
         } else {
-            guard project.notes.contains(where: { $0.id == draftID }) else { return }
+            guard project.notes.contains(where: { $0.id == draftID }) else {
+                errorMessage = "This note is no longer part of the encrypted project. Discard the draft and edit the note again."
+                return
+            }
             nextNotes = project.notes.map { note in note.id == draftID ? replacement : note }
         }
         let next = RDMProjectPayload(id: project.id, name: project.name, notes: nextNotes, roadmap: project.roadmap)
@@ -324,7 +338,14 @@ final class EncryptedProjectController {
     }
 
     func chooseToCreate(from sourceProject: RDMProjectPayload? = nil) {
-        guard phase == .idle else { return }
+        // Silently returning here was a real dead end: the caller in the copy
+        // flow would report "Copy prepared" and then show nothing at all,
+        // because the panel never opened and no reason was given.
+        guard phase == .idle else {
+            pendingCreationProject = nil
+            errorMessage = "An encrypted project is already open. Lock it before creating another one."
+            return
+        }
         pendingCreationProject = sourceProject
         let panel = NSOpenPanel()
         panel.title = "Choose a folder for the encrypted project"
@@ -349,7 +370,10 @@ final class EncryptedProjectController {
     }
 
     func chooseToOpen() {
-        guard phase == .idle else { return }
+        guard phase == .idle else {
+            errorMessage = "An encrypted project is already open. Lock it before opening another."
+            return
+        }
         let panel = NSOpenPanel()
         panel.title = "Open an encrypted Folio project"
         panel.message = "Choose the folder that contains the .rdm file. Folio needs the folder, not the file alone, because the project keeps its encrypted working copy beside it."
@@ -480,7 +504,10 @@ final class EncryptedProjectController {
     }
 
     func useSavedPassphrase() async {
-        guard phase == .opening, let fileURL else { return }
+        guard phase == .opening, let fileURL else {
+            errorMessage = "Choose an encrypted project before using a saved passphrase."
+            return
+        }
         do {
             guard let saved = try EncryptedPassphraseKeychain.load(for: fileURL) else {
                 errorMessage = "No saved passphrase was found for this exact file location."
@@ -494,7 +521,10 @@ final class EncryptedProjectController {
     }
 
     func forgetSavedPassphrase() {
-        guard let fileURL else { return }
+        guard let fileURL else {
+            errorMessage = "Choose an encrypted project before forgetting a saved passphrase."
+            return
+        }
         do { try EncryptedPassphraseKeychain.remove(for: fileURL); notice = "The optional saved passphrase was removed from this Mac." }
         catch { errorMessage = error.localizedDescription }
     }
