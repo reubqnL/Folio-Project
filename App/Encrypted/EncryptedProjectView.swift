@@ -78,8 +78,8 @@ struct EncryptedProjectView: View {
             Spacer()
             Image(systemName: "lock.doc").font(.system(size: 48)).foregroundStyle(FolioStyle.gold)
             Text("Encrypted projects").font(.largeTitle.weight(.semibold))
-            Text("Open or create an authenticated .rdm project. Its working search index is memory-resident with an encrypted local cache; it is never connected to the plain-vault search cache.")
-                .foregroundStyle(.secondary).frame(maxWidth: 620, alignment: .leading)
+            Text("Open or create an authenticated .rdm project. Folio asks for the folder that holds it rather than the file alone, because the project keeps an encrypted working copy in a .folio folder beside the archive. Its search index is memory-resident with an encrypted local cache; it is never connected to the plain-vault search cache.")
+                .foregroundStyle(.secondary).frame(maxWidth: 620, alignment: .leading).fixedSize(horizontal: false, vertical: true)
             if copyIsPreparing {
                 VStack(alignment: .leading, spacing: 9) {
                     ProgressView(value: copyTotal > 0 ? Double(copyCompleted) : nil,
@@ -117,6 +117,14 @@ struct EncryptedProjectView: View {
         credentialCard(title: "Create encrypted project", subtitle: "The passphrase unlocks this .rdm file. It is not saved by Folio.") {
             TextField("Project name", text: $controller.projectName)
                 .textFieldStyle(.roundedBorder)
+            if let folder = controller.chosenFolder {
+                // Names the exact folder and file rather than leaving the user
+                // to infer it, since the file is written beside a hidden
+                // working folder that Folio also creates.
+                Text("Creates “\(controller.plannedArchiveName)” in \(folder.path), with its encrypted working copy in a .folio folder beside it.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             SecureField("Passphrase", text: $controller.passphrase)
                 .textFieldStyle(.roundedBorder)
             SecureField("Confirm passphrase", text: $controller.confirmation)
@@ -135,40 +143,79 @@ struct EncryptedProjectView: View {
         }
     }
 
+    @ViewBuilder
     private var openView: some View {
-        credentialCard(title: "Unlock encrypted project", subtitle: controller.fileURL?.lastPathComponent ?? "Choose a credential") {
-            if controller.credentialMode == .passphrase {
-                SecureField("Passphrase", text: $controller.passphrase)
-                    .textFieldStyle(.roundedBorder)
-                Toggle("Remember passphrase in this Mac’s locked Keychain", isOn: $controller.rememberPassphrase)
-                    .toggleStyle(.checkbox)
-                HStack {
-                    Button("Use saved passphrase") { Task { await controller.useSavedPassphrase() } }
-                        .buttonStyle(.link)
-                    Button("Forget saved passphrase") { controller.forgetSavedPassphrase() }
-                        .buttonStyle(.link)
-                    Spacer()
-                    Button("Use recovery code instead") { controller.useRecoveryCode() }
-                    Button("Unlock") { Task { await controller.unlock() } }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(controller.passphrase.isEmpty)
+        if controller.rdmChoices.isEmpty {
+            credentialCard(title: "Unlock encrypted project", subtitle: controller.fileURL?.lastPathComponent ?? "Choose a credential") {
+                if controller.credentialMode == .passphrase {
+                    SecureField("Passphrase", text: $controller.passphrase)
+                        .textFieldStyle(.roundedBorder)
+                    Toggle("Remember passphrase in this Mac’s locked Keychain", isOn: $controller.rememberPassphrase)
+                        .toggleStyle(.checkbox)
+                    HStack {
+                        Button("Use saved passphrase") { Task { await controller.useSavedPassphrase() } }
+                            .buttonStyle(.link)
+                        Button("Forget saved passphrase") { controller.forgetSavedPassphrase() }
+                            .buttonStyle(.link)
+                        Spacer()
+                        Button("Use recovery code instead") { controller.useRecoveryCode() }
+                        Button("Unlock") { Task { await controller.unlock() } }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(controller.passphrase.isEmpty)
+                    }
+                } else {
+                    TextField("Recovery code", text: $controller.recoveryCode)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                    HStack {
+                        Button("Use passphrase instead") { controller.usePassphrase() }
+                            .buttonStyle(.link)
+                        Spacer()
+                        Button("Recover and unlock") { Task { await controller.unlock() } }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(controller.recoveryCode.isEmpty)
+                    }
                 }
-            } else {
-                TextField("Recovery code", text: $controller.recoveryCode)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.body, design: .monospaced))
-                HStack {
-                    Button("Use passphrase instead") { controller.usePassphrase() }
-                        .buttonStyle(.link)
-                    Spacer()
-                    Button("Recover and unlock") { Task { await controller.unlock() } }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(controller.recoveryCode.isEmpty)
+                Button("Cancel") { Task { await controller.close() } }
+                    .buttonStyle(.borderless)
+            }
+        } else {
+            archiveChooser
+        }
+    }
+
+    /// Shown when the chosen folder holds more than one `.rdm`.
+    ///
+    /// Folio asks for a folder rather than a file because a project needs its
+    /// neighbouring working folder, and a folder can hold several projects. It
+    /// asks which one instead of picking for the user.
+    private var archiveChooser: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Which encrypted project?").font(.title2.weight(.semibold))
+            Text("This folder holds more than one .rdm file. Choose the one to unlock.")
+                .font(.callout).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(controller.rdmChoices, id: \.self) { url in
+                    Button {
+                        controller.selectArchive(url)
+                    } label: {
+                        HStack {
+                            Image(systemName: "lock.doc")
+                            Text(url.lastPathComponent)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
             Button("Cancel") { Task { await controller.close() } }
                 .buttonStyle(.borderless)
         }
+        .padding(26).frame(width: 520).background(FolioStyle.editor)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.12)))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var recoveryReview: some View {

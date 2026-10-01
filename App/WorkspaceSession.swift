@@ -132,7 +132,7 @@ final class WorkspaceSession {
                 let roadmapSnapshot = try await currentStore.loadRoadmap()
                 let payload = RDMProjectPayload(id: UUID(), name: currentProject.name,
                                                 notes: encryptedNotes, roadmap: roadmapSnapshot.document)
-                encryptedCopyMessage = "Copy prepared. Choose a destination and passphrase."
+                encryptedCopyMessage = "Copy prepared. Choose a folder and passphrase."
                 encrypted.chooseToCreate(from: payload)
                 if encrypted.phase == .creating { destination = .encrypted }
             } catch is CancellationError {

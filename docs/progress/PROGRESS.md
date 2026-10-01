@@ -228,6 +228,24 @@ This is the item the encrypted contract already listed as outstanding — *"mult
 
 **What is not established.** None of this has been executed. Two Apple DTS answers conflict on whether `kSecAttrSynchronizable: false` alone selects the data protection keychain, which is why this code sets `kSecUseDataProtectionKeychain` explicitly rather than relying on that attribute. Whether the data protection keychain is reachable from an ad-hoc signed sandboxed build cannot be determined here; the fallback exists precisely because it cannot. The stored item's protection class cannot be verified without a Mac.
 
+## Increment 14c — creating an encrypted project was blocked by the sandbox
+
+**Reported by the owner:** "The RDM doesnt let u create an encrypted project."
+
+**The cause is the sandbox, and it stops the very first write.** Folio asked for a **file** — `NSSavePanel` for creation, `NSOpenPanel` with a `.rdm` filter for opening — and then tried to use the folder around it. An encrypted project is not one file on disk: `RDMFileStore` also creates a `.folio` folder beside the archive, takes an advisory lock, and keeps the atomic staging area and the encrypted working drafts there. Apple's App Sandbox extends a panel-selected file grant to **that file alone**. DTS states it directly: *"When the user selects a file in the open panel, the system extends your sandbox to allow access to just that file. That extension does not apply to the directory containing that file, so if you try to create a new file in that directory … that will be blocked by the sandbox."* The same applies to a save panel — it returns a security-scoped URL for the file name entered, not for the directory.
+
+So `RDMFileStore.init` failed at `fs.directory(".folio")` or at the lock acquisition, before any cryptography ran. Creation could never have worked in a sandboxed build, and **opening was broken the same way** — opening also takes the lock and reads the working store — which is worth noting because the failure would have been reported as two unrelated symptoms. Nothing in the storage layer was wrong; the container was doing what it was designed to do, and the panel was asking for too little.
+
+**The fix: ask for the folder.** Creation and opening both present an `NSOpenPanel` that chooses a directory (`canChooseFiles: false`, `canChooseDirectories: true`, `canCreateDirectories: true`). That is the grant that covers everything the format writes, and it is what Apple recommends for output that is more than one file. Specifically:
+
+- **Creation** takes the folder plus the project name already present in the card, and writes `<folder>/<project name>.rdm`. The destination is rebuilt from the name at the moment Create is pressed, so renaming the project after choosing the folder renames the file rather than writing to the previously previewed name. `archiveFileName(for:)` turns the name into a safe single path component — separators and control characters replaced, leading dots stripped, length bounded, empty falls back to "Encrypted project" — and `plannedArchiveName` uses the same function, so the card's preview and what gets written cannot disagree. The card now names the folder and the file explicitly.
+- **Opening** takes the folder and finds the `.rdm` inside it. One archive opens straight away. Several are offered as a list to choose from rather than guessed at, because a folder is a legitimate place to keep more than one. None produces a clear message saying so.
+- The folder grant is **held** for the session as a security-scoped resource, because checkpoints and working-copy writes happen throughout it, and released with the rest of the plaintext state when the project is locked or closed.
+
+The create card's subtitle, the idle explanation and the copy-flow message were updated to say "folder" rather than "destination", since all three previously described a file picker.
+
+**Not verified:** unverified source, and this one is structural rather than cosmetic. It cannot be compiled or exercised here, no encrypted project has been created or opened on real hardware, and the sandbox behaviour it depends on is documented by Apple but not observed on this project's own build. The next build is the first time any of it runs.
+
 ## Evidence status
 
 - Mac compile evidence (Swift 6.3.2 / macOS 26 / arm64) confirmed the vendored libarchive headers fix and exposed two unrelated portability defects (a malformed raw-HTML parser declaration and Apple SQLite's unavailable load-extension API). Both are fixed, and the owner's macOS 27 run below executed the suite that covers them.

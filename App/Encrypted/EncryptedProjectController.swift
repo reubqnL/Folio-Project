@@ -56,6 +56,31 @@ final class EncryptedProjectController {
     @ObservationIgnored private var draftNoteID: UUID?
     @ObservationIgnored private var draftStageTask: Task<Void, Never>?
 
+    /// The folder the user granted access to, and the reason this controller
+    /// asks for a folder at all.
+    ///
+    /// A `.rdm` project is not one file on disk. Writing it also creates a
+    /// `.folio` folder beside the archive, holding the advisory lock, the
+    /// atomic staging area and the encrypted working drafts. macOS extends a
+    /// panel-selected *file* grant to that file alone — Apple's own guidance is
+    /// explicit that "that extension does not apply to the directory containing
+    /// that file", so creating a sibling directory there is blocked by the
+    /// sandbox. Creating and opening an encrypted project therefore failed on
+    /// the folder write, before any cryptography ran.
+    ///
+    /// Asking the user for the containing folder is the grant that covers
+    /// everything the format writes, and it is what Apple recommends for output
+    /// that is more than one file. The scope is held for as long as the project
+    /// is open, because checkpoints and working-copy writes happen throughout
+    /// the session.
+    @ObservationIgnored private var grantedFolder: URL?
+
+    /// The folder chosen for the current create or open operation.
+    var chosenFolder: URL?
+
+    /// More than one `.rdm` was found in the chosen folder; the user picks one.
+    var rdmChoices: [URL] = []
+
     /// Every unsaved draft the encrypted working copy holds, newest first.
     ///
     /// The editor holds one draft at a time, but the working store holds up to
@@ -301,15 +326,22 @@ final class EncryptedProjectController {
     func chooseToCreate(from sourceProject: RDMProjectPayload? = nil) {
         guard phase == .idle else { return }
         pendingCreationProject = sourceProject
-        let panel = NSSavePanel()
-        panel.title = "Create an encrypted Folio project"
-        panel.message = "Choose a local .rdm file. The recovery code will be shown once and will not be saved by Folio."
-        panel.nameFieldStringValue = "Encrypted project.rdm"
+        let panel = NSOpenPanel()
+        panel.title = "Choose a folder for the encrypted project"
+        panel.message = "Folio creates the .rdm file and its encrypted working copy inside this folder, so it asks for the folder rather than for a single file."
+        panel.prompt = "Choose Folder"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        panel.allowedFileTypes = ["rdm"]
-        guard panel.runModal() == .OK, let url = panel.url else { pendingCreationProject = nil; return }
-        fileURL = url.pathExtension.lowercased() == "rdm" ? url : url.appendingPathExtension("rdm")
-        projectName = sourceProject?.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? "Encrypted project"
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let folder = panel.url else {
+            pendingCreationProject = nil
+            return
+        }
+        grant(folder)
+        chosenFolder = folder
+        projectName = sourceProject?.name ?? "Encrypted project"
+        fileURL = folder.appendingPathComponent(Self.archiveFileName(for: projectName))
         phase = .creating
         rememberPassphrase = false
         clearCredentials()
@@ -320,12 +352,35 @@ final class EncryptedProjectController {
         guard phase == .idle else { return }
         let panel = NSOpenPanel()
         panel.title = "Open an encrypted Folio project"
-        panel.message = "Choose a local .rdm file. Folio will not import it into the plain-vault workspace."
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
+        panel.message = "Choose the folder that contains the .rdm file. Folio needs the folder, not the file alone, because the project keeps its encrypted working copy beside it."
+        panel.prompt = "Choose Folder"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.allowedFileTypes = ["rdm"]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        grant(folder)
+        chosenFolder = folder
+        let archives = Self.archives(in: folder)
+        guard let first = archives.first else {
+            errorMessage = "That folder has no .rdm project in it. Choose the folder that holds the encrypted project."
+            releaseGrant()
+            chosenFolder = nil
+            return
+        }
+        // One archive opens straight away; several are offered to the user
+        // rather than guessed at.
+        rdmChoices = archives.count > 1 ? archives : []
+        beginOpen(at: first)
+    }
+
+    /// Chooses one archive from a folder that holds several.
+    func selectArchive(_ url: URL) {
+        guard phase == .opening else { return }
+        rdmChoices = []
+        beginOpen(at: url)
+    }
+
+    private func beginOpen(at url: URL) {
         fileURL = url
         phase = .opening
         credentialMode = .passphrase
@@ -334,11 +389,63 @@ final class EncryptedProjectController {
         clearMessages()
     }
 
+    /// The file name a new project will be given, derived from its name.
+    ///
+    /// Shown in the create card and used to build the destination, so what the
+    /// card says and what gets written cannot disagree.
+    var plannedArchiveName: String { Self.archiveFileName(for: projectName) }
+
+    /// Turns a project name into a safe single-component file name.
+    static func archiveFileName(for projectName: String) -> String {
+        var name = projectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.lowercased().hasSuffix(".rdm") { name = String(name.dropLast(4)) }
+        for bad in ["/", ":", "\\", "\n", "\r", "\0"] {
+            name = name.replacingOccurrences(of: bad, with: "-")
+        }
+        name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        while name.hasPrefix(".") { name.removeFirst() }
+        if name.isEmpty { name = "Encrypted project" }
+        if name.count > 80 { name = String(name.prefix(80)) }
+        return name + ".rdm"
+    }
+
+    private static func archives(in folder: URL) -> [URL] {
+        let contents = (try? FileManager.default.contentsOfDirectory(
+            at: folder, includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants])) ?? []
+        return contents
+            .filter { $0.pathExtension.lowercased() == "rdm" }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    /// Holds the sandbox grant for a chosen folder for as long as the project
+    /// is open. Calling this on a URL that carries no security scope is
+    /// harmless: it reports false and grants nothing extra.
+    private func grant(_ folder: URL) {
+        releaseGrant()
+        _ = folder.startAccessingSecurityScopedResource()
+        grantedFolder = folder
+    }
+
+    private func releaseGrant() {
+        grantedFolder?.stopAccessingSecurityScopedResource()
+        grantedFolder = nil
+    }
+
     func create() async {
-        guard phase == .creating, let fileURL else { return }
+        guard phase == .creating else { return }
         let name = projectName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { errorMessage = "Enter an encrypted project name."; return }
         guard passphrase == confirmation else { errorMessage = "The passphrases do not match."; return }
+        guard let folder = chosenFolder else {
+            errorMessage = "Choose a folder for the encrypted project first."
+            return
+        }
+        // Rebuilt from the folder and the name as they stand now, so a project
+        // renamed after the folder was chosen writes to the new name rather
+        // than to the one previewed at the time.
+        let destination = folder.appendingPathComponent(Self.archiveFileName(for: name))
+        fileURL = destination
         let secret = passphrase
         let remember = rememberPassphrase
         clearCredentials()
@@ -346,7 +453,7 @@ final class EncryptedProjectController {
             let source = pendingCreationProject
             let payload = RDMProjectPayload(id: UUID(), name: name,
                                             notes: source?.notes ?? [], roadmap: source?.roadmap ?? .empty)
-            let created = try await RDMProjectSession.create(at: fileURL, project: payload, passphrase: secret)
+            let created = try await RDMProjectSession.create(at: destination, project: payload, passphrase: secret)
             session = created.session
             pendingCreationProject = nil
             project = payload
@@ -354,7 +461,7 @@ final class EncryptedProjectController {
             phase = .recoveryReview
             notice = "The encrypted project is open, but keep the recovery code visible until you have stored it securely."
             if remember {
-                do { try EncryptedPassphraseKeychain.save(secret, for: fileURL) }
+                do { try EncryptedPassphraseKeychain.save(secret, for: destination) }
                 catch { notice = "Project created, but the optional Keychain save failed: \(error.localizedDescription)" }
             }
         } catch {
@@ -629,6 +736,11 @@ final class EncryptedProjectController {
         // The drafts themselves stay encrypted in the working copy; only the
         // in-memory index of them is dropped with the rest of the plaintext.
         preservedDrafts = []
+        // The folder grant is released with everything else: nothing must keep
+        // access to an encrypted project's folder after it is locked.
+        releaseGrant()
+        chosenFolder = nil
+        rdmChoices = []
         query = ""
         pendingRecoveryCode = nil
         rememberPassphrase = false
